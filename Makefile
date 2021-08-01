@@ -10,8 +10,6 @@ DEBUG ?= 0
 #ROOT ?=
 PREFIX ?= usr/local
 MANDIR ?= share/man
-# command used to get root (needed for tarball creation)
-GETROOT = fakeroot
 
 # We use fixed addresses to avoid overlap when relocating
 # and other trouble with initrd
@@ -135,28 +133,14 @@ dep:
 	makedepend -I include *.c lib/*.c util/*.c gui/*.c
 
 docs:
-	make -C doc all
-
-bindist: all
-	mkdir ../yaboot-binary-${VERSION}
-	$(GETROOT) make ROOT=../yaboot-binary-${VERSION} install
-	mkdir -p -m 755 ../yaboot-binary-${VERSION}/usr/local/share/doc/yaboot
-	cp -a COPYING ../yaboot-binary-${VERSION}/usr/local/share/doc/yaboot/COPYING
-	cp -a README ../yaboot-binary-${VERSION}/usr/local/share/doc/yaboot/README
-	cp -a doc/README.rs6000 ../yaboot-binary-${VERSION}/usr/local/share/doc/yaboot/README.rs6000
-	cp -a doc/yaboot-howto.html ../yaboot-binary-${VERSION}/usr/local/share/doc/yaboot/yaboot-howto.html
-	cp -a doc/yaboot-howto.sgml ../yaboot-binary-${VERSION}/usr/local/share/doc/yaboot/yaboot-howto.sgml
-	mv ../yaboot-binary-${VERSION}/boot/yaboot.conf ../yaboot-binary-${VERSION}/usr/local/share/doc/yaboot/
-	rmdir ../yaboot-binary-${VERSION}/
-	$(GETROOT) tar -C ../yaboot-binary-${VERSION} -zcvpf ../yaboot-binary-${VERSION}.tar.gz .
-	rm -rf ../yaboot-binary-${VERSION}
+	$(MAKE) -C doc all
 
 clean:
 	rm -f second/yaboot util/addnote util/elfextract $(OBJS)
 	#rm -rf man.deb
 
 cleandocs:
-	make -C doc clean
+	$(MAKE) -C doc clean
 
 ## removes arch revision control crap, only to be called for making
 ## release tarballs.  arch should have a export command like cvs...
