@@ -182,7 +182,7 @@ easily change the order of the partitions in the partition map using the
 words, it's not the physical placement of the bootstrap partition that
 counts, it's the logical order within the partition map. Note, though, if
 you have an existing system and you shift the partition numbers around, you
-will need to make the appropriate changes in <file>/etc/fstab</file>.
+will need to make the appropriate changes in <file>/boot/fstab</file>.
 
 <p>
 
@@ -448,7 +448,7 @@ section.
 <sect>Optional and Cool Settings
 <p>
 
-Yaboot and your multiboot menu can throw a splash of color into your life!
+Yaboot and your boot menu can throw a splash of color into your life!
 Use <tt>fgcolor=</tt> and <tt>bgcolor=</tt> lines to set your screen to wake
 you up in the morning with black, blue, light-blue, green, light-green,
 cyan, light-cyan, red, light-red, purple, light-purple, brown, light-gray,
@@ -463,8 +463,8 @@ the network, or CDROM.
 
 <p>
 
-Use Set delay= (in seconds) to determine how long the multiboot OS menu
-should wait before booting the default OS. <tt>timeout=</tt> (in tenths of
+Use Set delay= (in seconds) to determine how long the boot menu should
+wait before booting the default OS. <tt>timeout=</tt> (in tenths of
 seconds) to set how long yaboot should wait at the boot: prompt for
 you to choose a kernel image before booting the first image in the
 file or the <tt>default=</tt> image.

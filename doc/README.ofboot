@@ -13,8 +13,8 @@ includes the following capabilities:
 
 * Configurable colors.  (see the yaboot.conf(5) man page).
 
-The multiboot menu is only presented when an extra OS is defined in
-/etc/yaboot.conf, otherwise this script loads yaboot without any user
+The boot menu is only presented when an extra OS is defined in
+/boot/yaboot.conf, otherwise this script loads yaboot without any user
 interaction.
 
 To enable a multi boot menu add bsd=ofpath and/or macos=ofpath and/or
@@ -25,7 +25,7 @@ and ybin will translate it automatically using ofpath.
 
 This script when presenting a dual boot menu will wait for a defined
 number of seconds before automatically booting the default OS.  Both
-this delay and the default OS can be configured in /etc/yaboot.conf.
+this delay and the default OS can be configured in /boot/yaboot.conf.
 
 The delay is configured by adding delay=seconds.  Unlike timeout this
 is in seconds rather then 10ths of seconds.  This option has no effect

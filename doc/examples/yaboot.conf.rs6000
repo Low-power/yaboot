@@ -36,7 +36,7 @@ nonvram
 
 ## Password supplied in plaintext, required for yaboot to boot, unless
 ## restricted is also present (see below).  Be sure to
-## chmod 600 /etc/yaboot.conf if you set this!
+## chmod 600 /boot/yaboot.conf if you set this!
 
 #password=secret
 

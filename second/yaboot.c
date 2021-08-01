@@ -56,7 +56,7 @@
 #include "debug.h"
 
 #define CONFIG_FILE_NAME	"yaboot.conf"
-#define CONFIG_FILE_MAX		0x8000		/* 32k */
+#define CONFIG_FILE_MAX		0x8000		/* 32Ki */
 
 #ifdef USE_MD5_PASSWORDS
 #include "md5.h"
@@ -300,7 +300,7 @@ void print_message_file(char *filename)
 	  }
 
      strncpy(msgpath, filename, sizeof(msgpath));
-     if (!parse_device_path(msgpath, defdev, defpart, "/etc/yaboot.msg", &msgfile)) {
+     if (!parse_device_path(msgpath, defdev, defpart, "/boot/yaboot.msg", &msgfile)) {
 	  prom_printf("%s: Unable to parse\n", msgpath);
 	  goto done;
      }
@@ -465,7 +465,7 @@ static int load_my_config_file(struct boot_fspec_t *orig_fspec)
      struct bootp_packet *packet;
      int rc = 0;
      struct boot_fspec_t fspec = *orig_fspec;
-     char *cfgpath = (_machine == _MACH_chrp || _machine == _MACH_bplan) ? "/etc/" : "";
+     char *cfgpath = (_machine == _MACH_chrp || _machine == _MACH_bplan) ? "/boot/" : "";
      int flen;
      int minlen;
 
@@ -476,8 +476,8 @@ static int load_my_config_file(struct boot_fspec_t *orig_fspec)
       * prepended.
       */
 
-     /* 3 chars per byte in chaddr + 2 chars for htype + /etc/ +\0 */
-     fspec.file = malloc(packet->hlen * 3 + 2 + 6);
+     /* 3 chars per byte in chaddr + 2 chars for htype + /boot/ +\0 */
+     fspec.file = malloc(packet->hlen * 3 + 2 + 7);
      if (!fspec.file)
 	  goto out;
 
@@ -489,9 +489,9 @@ static int load_my_config_file(struct boot_fspec_t *orig_fspec)
 	  goto out;
 
      /*
-      * Now try to match on IP.
+      * Now try to match on IP address.
       */
-     /* no need to realloc for /etc/ + 8 chars in yiaddr + \0 */
+     /* no need to realloc for /boot/ + 8 chars in yiaddr + \0 */
      sprintf(fspec.file, "%s%s", cfgpath, prom_get_ip(packet));
 
      for (flen = strlen(fspec.file),
@@ -864,7 +864,7 @@ int get_params(struct boot_param_t* params)
            "kernel image. You can, also, specify a different initrd file to any other\n"
            "label of the yaboot configuration file. Just type \"label initrd=[name.img]\"\n"
            "and the specified initrd file will be loaded.\n\n"
-	       "To load an alternative config file rather than /etc/yaboot.conf, enter\n"
+	       "To load an alternative config file rather than /boot/yaboot.conf, enter\n"
 	       "its device, partno and path, on Open Firmware Prompt:\n"
 	       "boot conf=device:partno,/path/to/configfile\n."
 	       "To reload the config file or load a new one, use the \"conf\" command\n"
@@ -966,7 +966,7 @@ int get_params(struct boot_param_t* params)
              if (strlen(boot.file))
                  prom_printf("file: %s\n", boot.file);
              else
-                 prom_printf("file: /etc/%s\n",CONFIG_FILE_NAME);
+                 prom_printf("file: /boot/%s\n",CONFIG_FILE_NAME);
          }
 
          imagename = "\0";
@@ -1000,7 +1000,7 @@ int get_params(struct boot_param_t* params)
 
            /* check if user seted to use a initrd file from boot console */
            if (!definitrd && p != manualinitrd) {
-               if (manualinitrd[0] != "/" && (prom_get_devtype(defdevice_bak) != FILE_DEVICE_NET)) {
+               if (manualinitrd[0] != '/' && (prom_get_devtype(defdevice_bak) != FILE_DEVICE_NET)) {
                    strcpy(initrdpath, "/");
                    strcat(initrdpath, manualinitrd);
                } else
@@ -1069,9 +1069,9 @@ yaboot_text_ui(void)
 
 	  memset(&file, 0, sizeof(file));
 
-	  if (strlen(boot.file) && !strcmp(boot.file,"\\\\") && params.kernel.file[0] != '/'
+	  if (strlen(boot.file) && strcmp(boot.file,"\\\\") == 0 && params.kernel.file[0] != '/'
 	      && params.kernel.file[0] != '\\') {
-	       loc=(char*)malloc(strlen(params.kernel.file)+3);
+	       loc=malloc(strlen(params.kernel.file)+3);
 	       if (!loc) {
 		    prom_printf ("malloc error\n");
 		    goto next;
@@ -1269,42 +1269,42 @@ load_elf32(struct boot_file_t *file, loadinfo_t *loadinfo)
      unsigned long	loadaddr;
 
      /* Read the rest of the Elf header... */
-     if ((*(file->fs->read))(file, size, &e->e_version) < size) {
+     if (file->fs->read(file, size, &e->e_version) < size) {
 	  prom_printf("\nCan't read Elf32 image header\n");
-	  goto bail;
+	  return 0;
      }
 
      DEBUG_F("Elf32 header:\n");
      DEBUG_F(" e.e_type      = %d\n", (int)e->e_type);
      DEBUG_F(" e.e_machine   = %d\n", (int)e->e_machine);
      DEBUG_F(" e.e_version   = %d\n", (int)e->e_version);
-     DEBUG_F(" e.e_entry     = 0x%08x\n", (int)e->e_entry);
-     DEBUG_F(" e.e_phoff     = 0x%08x\n", (int)e->e_phoff);
-     DEBUG_F(" e.e_shoff     = 0x%08x\n", (int)e->e_shoff);
+     DEBUG_F(" e.e_entry     = 0x%08x\n", (unsigned int)e->e_entry);
+     DEBUG_F(" e.e_phoff     = 0x%08x\n", (unsigned int)e->e_phoff);
+     DEBUG_F(" e.e_shoff     = 0x%08x\n", (unsigned int)e->e_shoff);
      DEBUG_F(" e.e_flags     = %d\n", (int)e->e_flags);
-     DEBUG_F(" e.e_ehsize    = 0x%08x\n", (int)e->e_ehsize);
-     DEBUG_F(" e.e_phentsize = 0x%08x\n", (int)e->e_phentsize);
+     DEBUG_F(" e.e_ehsize    = 0x%08x\n", (unsigned int)e->e_ehsize);
+     DEBUG_F(" e.e_phentsize = 0x%08x\n", (unsigned int)e->e_phentsize);
      DEBUG_F(" e.e_phnum     = %d\n", (int)e->e_phnum);
 
      loadinfo->entry = e->e_entry;
 
      if (e->e_phnum > MAX_HEADERS) {
 	  prom_printf ("Can only load kernels with one program header\n");
-	  goto bail;
+	  return 0;
      }
 
-     ph = (Elf32_Phdr *)malloc(sizeof(Elf32_Phdr) * e->e_phnum);
+     ph = malloc(sizeof(Elf32_Phdr) * e->e_phnum);
      if (!ph) {
 	  prom_printf ("Malloc error\n");
-	  goto bail;
+	  return 0;
      }
 
      /* Now, we read the section header */
-     if ((*(file->fs->seek))(file, e->e_phoff) != FILE_ERR_OK) {
+     if (file->fs->seek(file, e->e_phoff) != FILE_ERR_OK) {
 	  prom_printf ("seek error\n");
 	  goto bail;
      }
-     if ((*(file->fs->read))(file, sizeof(Elf32_Phdr) * e->e_phnum, ph) !=
+     if (file->fs->read(file, sizeof(Elf32_Phdr) * e->e_phnum, ph) !=
 	 sizeof(Elf32_Phdr) * e->e_phnum) {
 	  prom_printf ("read error\n");
 	  goto bail;
@@ -1373,13 +1373,13 @@ load_elf32(struct boot_file_t *file, loadinfo_t *loadinfo)
 	       continue;
 
 	  /* Now, we skip to the image itself */
-	  if ((*(file->fs->seek))(file, p->p_offset) != FILE_ERR_OK) {
+	  if (file->fs->seek(file, p->p_offset) != FILE_ERR_OK) {
 	       prom_printf ("Seek error\n");
 	       prom_release(loadinfo->base, loadinfo->memsize);
 	       goto bail;
 	  }
 	  offset = p->p_vaddr - loadinfo->load_loc;
-	  if ((*(file->fs->read))(file, p->p_filesz, loadinfo->base+offset) != p->p_filesz) {
+	  if (file->fs->read(file, p->p_filesz, loadinfo->base+offset) != p->p_filesz) {
 	       prom_printf ("Read failed\n");
 	       prom_release(loadinfo->base, loadinfo->memsize);
 	       goto bail;
@@ -1392,8 +1392,7 @@ load_elf32(struct boot_file_t *file, loadinfo_t *loadinfo)
      return 1;
 
 bail:
-     if (ph)
-       free(ph);
+     free(ph);
      return 0;
 }
 
@@ -1407,9 +1406,9 @@ load_elf64(struct boot_file_t *file, loadinfo_t *loadinfo)
      unsigned long	loadaddr;
 
      /* Read the rest of the Elf header... */
-     if ((*(file->fs->read))(file, size, &e->e_version) < size) {
+     if (file->fs->read(file, size, &e->e_version) < size) {
 	  prom_printf("\nCan't read Elf64 image header\n");
-	  goto bail;
+	  return 0;
      }
 
      DEBUG_F("Elf64 header:\n");
@@ -1428,21 +1427,21 @@ load_elf64(struct boot_file_t *file, loadinfo_t *loadinfo)
 
      if (e->e_phnum > MAX_HEADERS) {
 	  prom_printf ("Can only load kernels with one program header\n");
-	  goto bail;
+	  return 0;
      }
 
      ph = (Elf64_Phdr *)malloc(sizeof(Elf64_Phdr) * e->e_phnum);
      if (!ph) {
 	  prom_printf ("Malloc error\n");
-	  goto bail;
+	  return 0;
      }
 
      /* Now, we read the section header */
-     if ((*(file->fs->seek))(file, e->e_phoff) != FILE_ERR_OK) {
+     if (file->fs->seek(file, e->e_phoff) != FILE_ERR_OK) {
 	  prom_printf ("Seek error\n");
 	  goto bail;
      }
-     if ((*(file->fs->read))(file, sizeof(Elf64_Phdr) * e->e_phnum, ph) !=
+     if (file->fs->read(file, sizeof(Elf64_Phdr) * e->e_phnum, ph) !=
 	 sizeof(Elf64_Phdr) * e->e_phnum) {
 	  prom_printf ("Read error\n");
 	  goto bail;
@@ -1529,8 +1528,7 @@ load_elf64(struct boot_file_t *file, loadinfo_t *loadinfo)
      return 1;
 
 bail:
-     if (ph)
-       free(ph);
+     free(ph);
      return 0;
 }
 
@@ -1665,7 +1663,7 @@ yaboot_main(void)
      /* If conf= specified on command line, it overrides
         Usage: conf=device:partition,/path/to/conffile
         Example: On Open Firmware Prompt, type
-                 boot conf=/pci@8000000f8000000/pci@1/pci1014,028C@1/scsi@0/sd@1,0:3,/etc/yaboot.conf */
+                 boot conf=/pci@8000000f8000000/pci@1/pci1014,028C@1/scsi@0/sd@1,0:3,/boot/yaboot.conf */
 
      if (!strncmp(bootargs, "conf=", 5)) {
         DEBUG_F("Using conf argument in Open Firmware\n");
@@ -1711,7 +1709,7 @@ yaboot_main(void)
 
      if (!conf_given) {
          if (_machine == _MACH_chrp || _machine == _MACH_bplan)
-             boot.file = "/etc/";
+             boot.file = "/boot/";
          else if (strlen(boot.file)) {
              if (!strncmp(boot.file, "\\\\", 2))
                  boot.file = "\\\\";

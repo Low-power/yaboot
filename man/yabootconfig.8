@@ -1,6 +1,6 @@
 .\" Hey Emacs! This file is -*- nroff -*- source.
 .\"
-.\" yabootconfig generates a simple /etc/yaboot.conf
+.\" yabootconfig generates a simple /boot/yaboot.conf
 .\" Copyright (C) 2001 Ethan Benson
 .\"
 .\" This program is free software; you can redistribute it and/or
@@ -20,7 +20,7 @@
 .TH YABOOTCONFIG 8 "24 November 2001" "GNU/Linux PowerPC" "System Manager's Manual"
 .SH NAME
 .B yabootconfig
-\- generates a simple /etc/yaboot.conf
+\- generates a simple /boot/yaboot.conf
 .SH SYNOPSIS
 .B yabootconfig
 .RB [ \ \-t | \-\-chroot\ \\fIdirectory\  ]
@@ -39,7 +39,7 @@ the configurator for the
 .BR yaboot (8)
 boot loader enabling GNU/Linux to be booted by OpenFirmware.
 Specifically it inspects the running system, generates a working
-.BR /etc/yaboot.conf (5)
+.BR /boot/yaboot.conf (5)
 and then runs \fBmkofboot\fR(8) to make the system bootable.
 
 .B yabootconfig
@@ -62,8 +62,8 @@ for the root disk on PowerMacs.
 Cause \fByabootconfig\fR to work as if \fIdirectory\fR is the /
 directory.  This is useful when booting from a rescue floppy or CDROM
 in which case you mount your true root filesystem on /target or /mnt.
-\fByabootconfig\fR will generate \fI<chroot>/etc/yaboot.conf\fR and
-pass the \*(lq-C <chroot>/etc/yaboot.conf\*(rq arguments to \fBmkofboot\fR(8).
+\fByabootconfig\fR will generate \fI<chroot>/boot/yaboot.conf\fR and
+pass the \*(lq-C <chroot>/boot/yaboot.conf\*(rq arguments to \fBmkofboot\fR(8).
 Example: yabootconfig --chroot /target
 .TP
 .BR \-r ,\  \-\-root\ \fIdevice
@@ -90,7 +90,7 @@ WILL BE ERASED when \fByabootconfig\fR runs \fBmkofboot\fR(8).
 .BR \-\-kernel\-args
 This option allows you to specify additional kernel arguments which
 will be placed in an \fIappend=\fR configuration variable in
-\fI/etc/yaboot.conf\fR(5).  You must quote the arguments you supply to this
+\fI/boot/yaboot.conf\fR(5).  You must quote the arguments you supply to this
 option.  Example: --kernel-args "video=ofonly"
 .TP
 .BR \-q ,\  \-\-quiet
@@ -106,7 +106,7 @@ the background in order to make the disk bootable after OS installation.
 .BR \-\-noinstall
 Normally \fByabootconfig\fR will automatically run \fBmkofboot\fR(8)
 after it successfully generates a valid
-\fI<chroot>/etc/yaboot.conf\fR.  This option causes \fByabootconfig\fR
+\fI<chroot>/boot/yaboot.conf\fR.  This option causes \fByabootconfig\fR
 to only generate the config file without installing the \fBbootstrap\fR.
 .TP
 .BR \-\-debug
@@ -122,7 +122,7 @@ Print out the version number and exit.
 .nf
 /etc/fstab \- static information about the filesystems
 .br
-/etc/yaboot.conf \- bootloader/ybin configuration file
+/boot/yaboot.conf \- bootloader/ybin configuration file
 .fi
 .SH AUTHORS
 .B yabootconfig

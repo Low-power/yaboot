@@ -171,7 +171,7 @@ Example:   /usr/local/lib/yaboot/ofboot
 
 Identifies the first stage loader. The example shown is the default. The
 ofboot script it refers to is included with and configured automatically by
-ybin from options in /etc/yaboot.conf. The magicboot= can be the full
+ybin from options in /boot/yaboot.conf. The magicboot= can be the full
 pathname to any OF CHRP script file. Since some newer OpenFirmware
 implementations appear to require a CHRP script, the magicboot= setting is
 highly recommended. If you don't include magicboot=, then yaboot itself will
@@ -237,17 +237,16 @@ Colors
 
 fgcolor=string
 
-Specifies the foreground (text) color used by yaboot and the
-multiboot menu.  Available colors are: black, blue, light-blue, green,
-light-green, cyan, light-cyan, red, light-red, purple, light- purple,
+Specifies the foreground (text) color used by yaboot and the boot
+menu.  Available colors are: black, blue, light-blue, green,
+light-green, cyan, light-cyan, red, light-red, purple, light-purple,
 brown, light-gray, dark-gray, yellow, and white.  The default is
 white.
 
 bgcolor=string
 
-Specifies the background color used by yaboot and the multiboot
-menu.  Available colors are the same as fgcolor. The default is
-black.
+Specifies the background color used by yaboot and the boot menu
+Available colors are the same as fgcolor. The default is black.
 
 
 ===========================================================================

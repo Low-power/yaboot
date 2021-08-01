@@ -14,7 +14,7 @@
 and
 .BR ybin (8).
 .SH SYNOPSIS
-.BI "/etc/yaboot.conf"
+.BI "/boot/yaboot.conf"
 .SH DESCRIPTION
 The \fByaboot.conf\fP file is a configuration file for \fByaboot\fP
 which is read during booting, and for \fBybin\fR(8) to generate a boot
@@ -26,7 +26,7 @@ includes which kernels to load and what options to pass to them.
 \fByaboot\fP reads and parses its configuration file found on the
 \fBbootstrap\fR(8) partition on PowerMacs, and directly from the root
 filesystem on IBM PowerPC hardware.  On PowerMacs you must run the
-\fBybin\fR(8) command each time you modify \fB/etc/yaboot.conf\fR.
+\fBybin\fR(8) command each time you modify \fB/boot/yaboot.conf\fR.
 
 \fByaboot\fP is able to boot kernels even without this configuration file or
 if this file is crippled or contains syntax errors, but the user has to
@@ -69,7 +69,7 @@ Optional <devicename> is the OpenFirmware name of the device the file or range
 is located on. See below for its syntax. For OpenFirmware the device
 name must be immediately followed by the \fI:\fP character. The default is
 the boot device yaboot was booted from, or the value of \fIdevice=\fR
-in \fB/etc/yaboot.conf\fR.
+in \fB/boot/yaboot.conf\fR.
 
 Optional <part> is the 1 based partition number on the device. First
 partition is 1 (e.g. on \fI/dev/sda\fP in Linux is this \fI/dev/sda1\fP).
@@ -177,7 +177,7 @@ The \fBybin\fR/\fBmkofboot\fR options are:
 
 The remaining options belong to \fByaboot\fR(8).
 .SH "GLOBAL OPTIONS"
-\fB/etc/yaboot.conf\fP begins with a possibly empty global options section.
+\fB/boot/yaboot.conf\fP begins with a possibly empty global options section.
 This section contains all variable assignments up to the first \fIimage\fP
 setting.
 
@@ -240,7 +240,7 @@ Uses the specified image as the default boot image. If `default' is omitted,
 the image appearing first in the configuration file is used.
 .TP
 .BI "defaultos=" linux|bsd|macos|macosx|darwin
-Defines the default OS for the first stage multiboot menu to load, by
+Defines the default OS for the first stage boot menu to load, by
 default this is linux, which really means \fByaboot\fR.
 Valid values are: linux, bsd, macos, macosx, and
 darwin.  This is only relevant if you have \fIbsd=\fR, \fImacos=\fR,
@@ -266,7 +266,7 @@ See
 .BR chmod (1)
 to set permissions on
 .BR yaboot.conf (5).
-Passwords currently do not affect the multiboot menu entries
+Passwords currently do not affect the boot menu entries
 (\fImacos=\fR, \fImacosx=\fR, etc).
 .TP
 .BI "timeout=" tsecs
@@ -287,7 +287,7 @@ the boot prompt.
 .TP
 .BI "fgcolor=" string
 Specifies the foreground (text) color used by \fByaboot\fR(8) and the
-multiboot menu.  Available colors are: black, blue, light-blue, green,
+boot menu.  Available colors are: black, blue, light-blue, green,
 light-green, cyan, light-cyan, red, light-red, purple, light-purple,
 brown, light-gray, dark-gray, yellow, and white.  The default is white.
 .TP
@@ -353,14 +353,14 @@ use the \fBofpath\fR(8) utility to determine the OpenFirmware device
 path.
 .TP
 .B "enablecdboot"
-This option adds an entry to the multiboot menu to boot from the CDROM drive.
+This option adds an entry to the boot menu to boot from the CDROM drive.
 .TP
 .B "enablenetboot"
-This option adds an entry to the multiboot menu to boot from the network.
+This option adds an entry to the boot menu to boot from the network.
 .TP
 .B "enableofboot"
-This option adds an entry to the multiboot menu to boot into an
-OpenFirmware prompt.
+This option adds an entry to the boot menu to boot into an OpenFirmware
+prompt.
 .TP
 .B "usemount"
 This option causes \fBybin\fR to use the regular \fBmount\fR(8)
@@ -580,7 +580,7 @@ this single-key feature.
 Restricted limits the ability to customize command line arguments.
 \fIrestricted\fR has no effect if \fIpassword=\fR is not specified.
 A password is only required to boot the image specified in
-\fB/etc/yaboot.conf\fP if parameters are specified on the command line
+\fB/boot/yaboot.conf\fP if parameters are specified on the command line
 or if the user enters an image that is not specified in the configuration
 file at all (arbitrary file load).  For an image not including
 the \fIrestricted\fR keyword (unless \fIrestricted\fR is in the global

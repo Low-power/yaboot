@@ -21,15 +21,13 @@
 ##
 ###############################################################################
 
-PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
+PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 ## allow to run out of /target in boot-floppies
-if [ -n "$PATH_PREFIX" ] ; then
-    PATH="${PATH}:${PATH_PREFIX}/sbin:${PATH_PREFIX}/bin:${PATH_PREFIX}/usr/sbin:${PATH_PREFIX}/usr/bin:${PATH_PREFIX}/usr/local/sbin:${PATH_PREFIX}/usr/local/bin"
-fi
+[ -n "$PATH_PREFIX" ] && PATH="${PATH_PREFIX}/usr/local/bin:${PATH_PREFIX}/usr/local/sbin:${PATH_PREFIX}/usr/bin:${PATH_PREFIX}/usr/sbin:${PATH_PREFIX}/bin:${PATH_PREFIX}/sbin:${PATH}"
 PRG="${0##*/}"
 ABSPRG="$0"
 SIGINT="$PRG: Interrupt caught ... exiting"
-VERSION=1.3.16
+VERSION=1.3.16-rivoreo-r1
 DEBUG=0
 VERBOSE=0
 TMP="${TMPDIR:-/tmp}"
@@ -51,8 +49,8 @@ trap "exit 143" 15
 
 ## allow for non-existent config file, in which case it will be
 ## generated from command line arguments.
-if [ -f /etc/yaboot.conf ] ; then
-    CONF=/etc/yaboot.conf
+if [ -f /boot/yaboot.conf ] ; then
+    CONF=/boot/yaboot.conf
     bootconf=$CONF
     ERR=" Error in $CONF:"
 else
@@ -572,7 +570,7 @@ else
     }
 fi
 
-## /etc/yaboot.conf with password should not be world readable.
+## /boot/yaboot.conf with password should not be world readable.
 permcheck()
 {
 if [ -L "$bootconf" ] ; then
@@ -1590,15 +1588,15 @@ fi
 ## generic yaboot.conf. do this before the confcheck to avoid wierd errors.
 if [ "$bootconf" = /dev/null ] ; then
     if (command -v yabootconfig > /dev/null 2>&1) ; then
-	echo 1>&2 "$PRG: Warning: no /etc/yaboot.conf, running yabootconfig to make one"
+	echo 1>&2 "$PRG: Warning: no /boot/yaboot.conf, running yabootconfig to make one"
 	yabootconfig --noinstall --quiet
 	if [ $? != 0 ] ; then
-	    echo 1>&2 "$PRG: yabootconfig failed, please supply a valid /etc/yaboot.conf"
-	    echo 1>&2 "$PRG: You may also use $PRG's --boot, --image, --partition, and --device switches"
-	    echo 1>&2 "$PRG: These switches will cause $PRG to generate a basic yaboot.conf on the fly"
+	    echo 1>&2 "$PRG: yabootconfig failed, please supply a valid yaboot.conf via --config"
+	    echo 1>&2 "$PRG: You may also use $PRG's --boot, --image, --partition, and --device options"
+	    echo 1>&2 "$PRG: These options will cause $PRG to generate a basic yaboot.conf on the fly"
 	    exit 1
 	else
-	    CONF=/etc/yaboot.conf
+	    CONF=/boot/yaboot.conf
 	    bootconf=$CONF
 	    ERR=" Error in $CONF:"
 	    confexist || exit 1

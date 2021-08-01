@@ -18,11 +18,11 @@ B. Building & Installation:
       your system partitions when installing Linux.
    2. Build yaboot by doing:
        make clean; make
-   3. Make a yaboot.conf file in /etc/yaboot.conf
+   3. Make a yaboot.conf file in /boot/yaboot.conf
    4. Install yaboot by doing (as root):
       mkofboot
 
-C. Configuration File (/etc/yaboot.conf):
+C. Configuration File (/boot/yaboot.conf):
    1. See the yaboot.conf(5) man page for the full range of options.
    2. Options tested on an RS/6000 include:
       timeout = <time in tenths of a second>
@@ -33,7 +33,7 @@ C. Configuration File (/etc/yaboot.conf):
 
    3. Examples:
 
-      ## example /etc/yaboot.conf for RS/6000
+      ## example /boot/yaboot.conf for RS/6000
       ## Timeout value is in tenths of a second
       boot=/dev/sda1
       install=/usr/local/lib/yaboot/yaboot

@@ -2,7 +2,7 @@
 
 ###############################################################################
 ##
-## yabootconfig generates a simple /etc/yaboot.conf
+## yabootconfig generates a simple /boot/yaboot.conf
 ## Copyright (C) 2001, 2002, 2003 Ethan Benson
 ##
 ## This program is free software; you can redistribute it and/or
@@ -21,16 +21,14 @@
 ##
 ###############################################################################
 
-PATH="/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin"
+PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 ## allow to run out of /target in boot-floppies
-if [ -n "$PATH_PREFIX" ] ; then
-    PATH="${PATH}:${PATH_PREFIX}/sbin:${PATH_PREFIX}/bin:${PATH_PREFIX}/usr/sbin:${PATH_PREFIX}/usr/bin:${PATH_PREFIX}/usr/local/sbin:${PATH_PREFIX}/usr/local/bin"
-fi
+[ -n "$PATH_PREFIX" ] && PATH="${PATH_PREFIX}/usr/local/bin:${PATH_PREFIX}/usr/local/sbin:${PATH_PREFIX}/usr/bin:${PATH_PREFIX}/usr/sbin:${PATH_PREFIX}/bin:${PATH_PREFIX}/sbin:${PATH}"
 PRG="${0##*/}"
-VERSION=1.0.8+debian2
+VERSION=1.3.16-rivoreo-r1
 CHROOT=/
 ## $CONFIG is relative to $CHROOT
-CONFIG=etc/yaboot.conf
+CONFIG=boot/yaboot.conf
 NOINSTALL=0
 QUIET=0
 DEBUG=0
@@ -95,7 +93,7 @@ usage()
 {
 echo \
 "Usage: $PRG [OPTION]...
-Generate a working /etc/yaboot.conf.
+Generate a working yaboot.conf.
 
   -t, --chroot               set root directory $PRG should work from
   -r, --root                 set root partition, Example: /dev/hda3
@@ -786,7 +784,7 @@ if [ $? != 0 ] ; then
     exit 1
 fi
 
-## rotate backups of /etc/yaboot.conf, 3 backups are kept
+## rotate backups of /boot/yaboot.conf, 3 backups are kept
 if [ -f "${CHROOT}${CONFIG}.old" ] ; then
     for i in 1 0 ; do
 	if [ -f "${CHROOT}${CONFIG}.old.${i}" ] ; then
@@ -805,7 +803,7 @@ if [ -f "${CHROOT}${CONFIG}.old" ] ; then
     fi
 fi
 
-## backup /etc/yaboot.conf
+## backup /boot/yaboot.conf
 if [ -f "${CHROOT}${CONFIG}" ] ; then
     mv -f "${CHROOT}${CONFIG}" "${CHROOT}${CONFIG}.old"
     if [ $? != 0 ] ; then
@@ -825,7 +823,7 @@ else
 fi
 
 ## tell mkofboot where to find the config file if necessary
-if [ "${CHROOT}${CONFIG}" != /etc/yaboot.conf ] ; then
+if [ "${CHROOT}${CONFIG}" != /boot/yaboot.conf ] ; then
     YBINARGS="-C ${CHROOT}${CONFIG}"
 fi
 

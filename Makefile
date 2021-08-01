@@ -35,13 +35,14 @@ OBJCOPY		:= $(CROSS)objcopy
 
 # The flags for the yaboot binary.
 #
-YBCFLAGS = -Os $(CFLAGS) -nostdinc -Wall -isystem `$(CC) -m32 -print-file-name=include` -fsigned-char
+YBCFLAGS = -Os $(CFLAGS) -nostdinc -Wall -fsigned-char
 YBCFLAGS += -fno-stack-protector
-YBCFLAGS += -DVERSION=\"${VERSION}${VERSIONEXTRA}\"	#"
-YBCFLAGS += -DTEXTADDR=$(TEXTADDR) -DDEBUG=$(DEBUG)
-YBCFLAGS += -DMALLOCADDR=$(MALLOCADDR) -DMALLOCSIZE=$(MALLOCSIZE)
-YBCFLAGS += -DKERNELADDR=$(KERNELADDR)
-YBCFLAGS += -I ./include
+YBCFLAGS += -D VERSION=\"${VERSION}${VERSIONEXTRA}\"   #"
+YBCFLAGS += -D TEXTADDR=$(TEXTADDR) -D DEBUG=$(DEBUG)
+YBCFLAGS += -D MALLOCADDR=$(MALLOCADDR) -D MALLOCSIZE=$(MALLOCSIZE)
+YBCFLAGS += -D KERNELADDR=$(KERNELADDR)
+YBCFLAGS += -I $(shell $(CC) --print-file-name include)
+YBCFLAGS += -I include
 
 ifeq ($(CONFIG_COLOR_TEXT),y)
 YBCFLAGS += -DCONFIG_COLOR_TEXT
@@ -65,7 +66,7 @@ endif
 
 # Link flags
 #
-LFLAGS = -Ttext $(TEXTADDR) -Bstatic -melf32ppclinux
+LDFLAGS += --Ttext $(TEXTADDR) --static -m elf32ppclinux
 
 # Libraries
 #
@@ -73,12 +74,12 @@ LLIBS = -lext2fs
 
 # For compiling userland utils
 #
-UCFLAGS = -Os $(CFLAGS) -Wall -I/usr/include
+UCFLAGS = -Os $(CFLAGS) -Wall
 
 # For compiling build-tools that run on the host.
 #
 HOSTCC = gcc
-HOSTCFLAGS = -O2 $(CFLAGS) -Wall -I/usr/include
+HOSTCFLAGS = -O2 $(CFLAGS) -Wall
 
 ## End of configuration section
 
@@ -100,12 +101,13 @@ OBJS += second/fs_reiserfs.o
 endif
 
 # compilation
-lgcc = `$(CC) -m32 -print-libgcc-file-name`
+#lgcc = `$(CC) -m32 -print-libgcc-file-name`
+LIBGCC := $(shell $(CC) --print-libgcc-file-name)
 
 all: yaboot addnote mkofboot
 
 yaboot: $(OBJS)
-	$(LD) $(LFLAGS) $(OBJS) $(LLIBS) $(lgcc) -o second/$@
+	$(LD) $(LDFLAGS) $(OBJS) $(LLIBS) $(LIBGCC) -o second/$@
 	chmod -x second/yaboot
 
 addnote:
@@ -128,7 +130,7 @@ mkofboot:
 	$(CC) $(YBCFLAGS) -D__ASSEMBLY__  -c -o $@ $<
 
 dep:
-	makedepend -Iinclude *.c lib/*.c util/*.c gui/*.c
+	makedepend -I include *.c lib/*.c util/*.c gui/*.c
 
 docs:
 	make -C doc all
@@ -142,19 +144,14 @@ bindist: all
 	cp -a doc/README.rs6000 ../yaboot-binary-${VERSION}/usr/local/share/doc/yaboot/README.rs6000
 	cp -a doc/yaboot-howto.html ../yaboot-binary-${VERSION}/usr/local/share/doc/yaboot/yaboot-howto.html
 	cp -a doc/yaboot-howto.sgml ../yaboot-binary-${VERSION}/usr/local/share/doc/yaboot/yaboot-howto.sgml
-	mv ../yaboot-binary-${VERSION}/etc/yaboot.conf ../yaboot-binary-${VERSION}/usr/local/share/doc/yaboot/
-	rmdir ../yaboot-binary-${VERSION}/etc
+	mv ../yaboot-binary-${VERSION}/boot/yaboot.conf ../yaboot-binary-${VERSION}/usr/local/share/doc/yaboot/
+	rmdir ../yaboot-binary-${VERSION}/
 	$(GETROOT) tar -C ../yaboot-binary-${VERSION} -zcvpf ../yaboot-binary-${VERSION}.tar.gz .
 	rm -rf ../yaboot-binary-${VERSION}
 
 clean:
 	rm -f second/yaboot util/addnote util/elfextract $(OBJS)
-	find . -not -path './\{arch\}*' -name '#*' | xargs rm -f
-	find . -not -path './\{arch\}*' -name '.#*' | xargs rm -f
-	find . -not -path './\{arch\}*' -name '*~' | xargs rm -f
-	find . -not -path './\{arch\}*' -name '*.swp' | xargs rm -f
-	find . -not -path './\{arch\}*' -name ',,*' | xargs rm -rf
-	-gunzip man/*.gz
+	#-gunzip man/*.gz
 	rm -rf man.deb
 
 cleandocs:
@@ -179,7 +176,7 @@ strip: all
 	strip --remove-section=.comment --remove-section=.note util/addnote
 
 install: all strip
-	install -d -o root -g root -m 0755 ${ROOT}/etc/
+	install -d -o root -g root -m 0755 ${ROOT}/boot/
 	install -d -o root -g root -m 0755 ${ROOT}/${PREFIX}/sbin/
 	install -d -o root -g root -m 0755 ${ROOT}/${PREFIX}/lib
 	install -d -o root -g root -m 0755 ${ROOT}/${PREFIX}/lib/yaboot
@@ -193,27 +190,27 @@ install: all strip
 	install -o root -g root -m 0755 ybin/yabootconfig ${ROOT}/${PREFIX}/sbin/yabootconfig
 	rm -f ${ROOT}/${PREFIX}/sbin/mkofboot
 	ln -s ybin ${ROOT}/${PREFIX}/sbin/mkofboot
-	@gzip -9 man/*.[58]
-	install -o root -g root -m 0644 man/bootstrap.8.gz ${ROOT}/${PREFIX}/${MANDIR}/man8/bootstrap.8.gz
-	install -o root -g root -m 0644 man/mkofboot.8.gz ${ROOT}/${PREFIX}/${MANDIR}/man8/mkofboot.8.gz
-	install -o root -g root -m 0644 man/ofpath.8.gz ${ROOT}/${PREFIX}/${MANDIR}/man8/ofpath.8.gz
-	install -o root -g root -m 0644 man/yaboot.8.gz ${ROOT}/${PREFIX}/${MANDIR}/man8/yaboot.8.gz
-	install -o root -g root -m 0644 man/yabootconfig.8.gz ${ROOT}/${PREFIX}/${MANDIR}/man8/yabootconfig.8.gz
-	install -o root -g root -m 0644 man/ybin.8.gz ${ROOT}/${PREFIX}/${MANDIR}/man8/ybin.8.gz
-	install -o root -g root -m 0644 man/yaboot.conf.5.gz ${ROOT}/${PREFIX}/${MANDIR}/man5/yaboot.conf.5.gz
-	@gunzip man/*.gz
-	@if [ ! -e ${ROOT}/etc/yaboot.conf ] ; then						\
-		echo "install -o root -g root -m 0644 etc/yaboot.conf ${ROOT}/etc/yaboot.conf"; \
-		install -o root -g root -m 0644 etc/yaboot.conf ${ROOT}/etc/yaboot.conf;	\
+	#@gzip -9 man/*.[58]
+	install -o root -g root -m 0644 man/bootstrap.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/bootstrap.8
+	install -o root -g root -m 0644 man/mkofboot.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/mkofboot.8
+	install -o root -g root -m 0644 man/ofpath.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/ofpath.8
+	install -o root -g root -m 0644 man/yaboot.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/yaboot.8
+	install -o root -g root -m 0644 man/yabootconfig.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/yabootconfig.8
+	install -o root -g root -m 0644 man/ybin.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/ybin.8
+	install -o root -g root -m 0644 man/yaboot.conf.5 ${ROOT}/${PREFIX}/${MANDIR}/man5/yaboot.conf.5
+	#@gunzip man/*.gz
+	@if [ ! -e ${ROOT}/boot/yaboot.conf ] ; then						\
+		set -x;										\
+		install -o root -g root -m 0644 doc/examples/yaboot.conf ${ROOT}/boot/yaboot.conf;\
 	 else											\
-		echo "/etc/yaboot.conf already exists, leaving it alone";			\
+		echo "${ROOT}/boot/yaboot.conf already exists, leaving it alone";		\
 	 fi
 	@echo
 	@echo "Installation successful."
 	@echo
-	@echo "An example /etc/yaboot.conf has been installed (unless /etc/yaboot.conf already existed)"
+	@echo "An example /boot/yaboot.conf has been installed (unless /boot/yaboot.conf already existed)"
 	@echo "You may either alter that file to match your system, or alternatively run yabootconfig"
-	@echo "yabootconfig will generate a simple and valid /etc/yaboot.conf for your system"
+	@echo "yabootconfig will generate a simple and valid /boot/yaboot.conf for your system"
 	@echo
 
 deinstall:
@@ -225,17 +222,17 @@ deinstall:
 	rm -f ${ROOT}/${PREFIX}/lib/yaboot/ofboot
 	rm -f ${ROOT}/${PREFIX}/lib/yaboot/addnote
 	@rmdir ${ROOT}/${PREFIX}/lib/yaboot || true
-	rm -f ${ROOT}/${PREFIX}/${MANDIR}/man8/bootstrap.8.gz
-	rm -f ${ROOT}/${PREFIX}/${MANDIR}/man8/mkofboot.8.gz
-	rm -f ${ROOT}/${PREFIX}/${MANDIR}/man8/ofpath.8.gz
-	rm -f ${ROOT}/${PREFIX}/${MANDIR}/man8/yaboot.8.gz
-	rm -f ${ROOT}/${PREFIX}/${MANDIR}/man8/yabootconfig.8.gz
-	rm -f ${ROOT}/${PREFIX}/${MANDIR}/man8/ybin.8.gz
-	rm -f ${ROOT}/${PREFIX}/${MANDIR}/man5/yaboot.conf.5.gz
+	rm -f ${ROOT}/${PREFIX}/${MANDIR}/man8/bootstrap.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/bootstrap.8.gz
+	rm -f ${ROOT}/${PREFIX}/${MANDIR}/man8/mkofboot.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/mkofboot.8.gz
+	rm -f ${ROOT}/${PREFIX}/${MANDIR}/man8/ofpath.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/ofpath.8.gz
+	rm -f ${ROOT}/${PREFIX}/${MANDIR}/man8/yaboot.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/yaboot.8.gz
+	rm -f ${ROOT}/${PREFIX}/${MANDIR}/man8/yabootconfig.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/yabootconfig.8.gz
+	rm -f ${ROOT}/${PREFIX}/${MANDIR}/man8/ybin.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/ybin.8.gz
+	rm -f ${ROOT}/${PREFIX}/${MANDIR}/man5/yaboot.conf.5 ${ROOT}/${PREFIX}/${MANDIR}/man5/yaboot.conf.5.gz
 	@if [ -L ${ROOT}/boot/yaboot -a ! -e ${ROOT}/boot/yaboot ] ; then rm -f ${ROOT}/boot/yaboot ; fi
 	@if [ -L ${ROOT}/boot/ofboot.b -a ! -e ${ROOT}/boot/ofboot.b ] ; then rm -f ${ROOT}/boot/ofboot.b ; fi
 	@echo
 	@echo "Deinstall successful."
-	@echo "${ROOT}/etc/yaboot.conf has not been removed, you may remove it yourself if you wish."
+	@echo "${ROOT}/boot/yaboot.conf has not been removed, you may remove it yourself if you wish."
 
 uninstall: deinstall

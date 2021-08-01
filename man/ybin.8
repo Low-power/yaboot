@@ -107,7 +107,7 @@ the default \fI/usr/local/lib/yaboot/yaboot\fR.
 .TP
 .BR \-C ,\  \-\-config\ \fIconfig-file
 Use \fIconfig-file\fR as the \fBybin\fR/\fByaboot\fR(8) configuration
-file instead of the default \fI/etc/yaboot.conf\fR.
+file instead of the default \fI/boot/yaboot.conf\fR.
 .TP
 .BR \-m ,\  \-\-magicboot\ \fIchrp-script
 Use \fIchrp-script\fR as the boot loader \*(lqwrapper\*(rq.  This
@@ -178,7 +178,7 @@ Print out the version number and exit.
 .nf
 /usr/local/lib/yaboot/yaboot \- boot loader executable
 /usr/local/lib/yaboot/ofboot \- OpenFirmware boot script
-/etc/yaboot.conf \- boot loader/ybin configuration file
+/boot/yaboot.conf \- boot loader/ybin configuration file
 .fi
 .SH ENVIRONMENT
 .TP
@@ -195,7 +195,7 @@ The Debian mktemp is derived from OpenBSD and thus should be secure.
 
 \fI/usr/local/lib/yaboot/ofboot\fR now contains code executed by /bin/sh (by
 \fBybin\fR). It is thus critical that it not be writable by anyone but
-root.  It is also critical that \fI/etc/yaboot.conf\fR not be writable
+root.  It is also critical that \fI/boot/yaboot.conf\fR not be writable
 by anyone but root since a different \fIofboot\fR script could be
 specified there.
 .SH BUGS
