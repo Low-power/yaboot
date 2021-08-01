@@ -145,11 +145,6 @@ cleandocs:
 ## removes arch revision control crap, only to be called for making
 ## release tarballs.  arch should have a export command like cvs...
 
-archclean:
-	rm -rf '{arch}'
-	find . -type d -name .arch-ids | xargs rm -rf
-	rm -f 0arch-timestamps0
-
 maintclean: clean cleandocs
 
 release: docs bindist clean
