@@ -409,10 +409,10 @@ _INLINE_ __u32 ext2fs_swab32(__u32 val)
 
 #endif /* !_EXT2_HAVE_ASM_SWAB */
 
-#if !defined(_EXT2_HAVE_ASM_FINDBIT_)
+#if !defined(_EXT2_HAVE_ASM_FINDBIT_) && 0
 _INLINE_ int ext2fs_find_first_bit_set(void * addr, unsigned size)
 {
-	char	*cp = (unsigned char *) addr;
+	char	*cp = addr;
 	int 	res = 0, d0;
 
 	if (!size)

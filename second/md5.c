@@ -151,12 +151,12 @@ md5_transform (const unsigned char block[64])
 static void
 md5_init(void)
 {
-  memcpy ((char *) state, (char *) initstate, sizeof (initstate));
+  memcpy (state, initstate, sizeof (initstate));
   length = 0;
 }
 
 static void
-md5_update (const char *input, int inputlen)
+md5_update (const unsigned char *input, int inputlen)
 {
   int buflen = length & 63;
   length += inputlen;
@@ -235,45 +235,45 @@ md5_password (const char *key, char *crypted, int check)
     }
 
   md5_init ();
-  md5_update (key, keylen);
-  md5_update (salt, saltlen);
-  md5_update (key, keylen);
+  md5_update ((const unsigned char *)key, keylen);
+  md5_update ((const unsigned char *)salt, saltlen);
+  md5_update ((const unsigned char *)key, keylen);
   digest = md5_final ();
   memcpy (alt_result, digest, 16);
 
-  memcpy ((char *) state, (char *) initstate, sizeof (initstate));
+  memcpy (state, initstate, sizeof (initstate));
   length = 0;
-  md5_update (key, keylen);
-  md5_update (crypted, 3 + saltlen); /* include the $1$ header */
+  md5_update ((const unsigned char *)key, keylen);
+  md5_update ((const unsigned char *)crypted, 3 + saltlen); /* include the $1$ header */
   for (i = keylen; i > 16; i -= 16)
     md5_update (alt_result, 16);
   md5_update (alt_result, i);
 
   for (i = keylen; i > 0; i >>= 1)
-    md5_update (key + ((i & 1) ? keylen : 0), 1);
+    md5_update ((const unsigned char *)key + ((i & 1) ? keylen : 0), 1);
   digest = md5_final ();
 
   for (i = 0; i < 1000; i++)
     {
       memcpy (alt_result, digest, 16);
 
-      memcpy ((char *) state, (char *) initstate, sizeof (initstate));
+      memcpy (state, initstate, sizeof (initstate));
       length = 0;
       if ((i & 1) != 0)
-	md5_update (key, keylen);
+	md5_update ((const unsigned char *)key, keylen);
       else
 	md5_update (alt_result, 16);
 
       if (i % 3 != 0)
-	md5_update (salt, saltlen);
+	md5_update ((const unsigned char *)salt, saltlen);
 
       if (i % 7 != 0)
-	md5_update (key, keylen);
+	md5_update ((const unsigned char *)key, keylen);
 
       if ((i & 1) != 0)
 	md5_update (alt_result, 16);
       else
-	md5_update (key, keylen);
+	md5_update ((const unsigned char *)key, keylen);
       digest = md5_final ();
     }
 
@@ -326,9 +326,9 @@ md5_password (const char *key, char *crypted, int check)
 static char *
 md5 (const char *input)
 {
-  memcpy ((char *) state, (char *) initstate, sizeof (initstate));
+  memcpy (state, initstate, sizeof (initstate));
   length = 0;
-  md5_update (input, strlen (input));
+  md5_update ((const unsigned char *)input, strlen (input));
   return md5_final ();
 }
 

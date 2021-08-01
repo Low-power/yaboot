@@ -95,9 +95,11 @@ partition_mac_lookup( const char *dev_name, prom_handle disk,
      int block, map_size;
 
      /* block_buffer contains block 0 from the partitions_lookup() stage */
-     struct mac_partition* part = (struct mac_partition *)block_buffer;
-     unsigned short ptable_block_size =
-	  ((struct mac_driver_desc *)block_buffer)->block_size;
+     struct mac_partition *part = (struct mac_partition *)block_buffer;
+	struct mac_driver_desc *driver_desc = (struct mac_driver_desc *)block_buffer;
+	unsigned short ptable_block_size = driver_desc->block_size;
+     //unsigned short ptable_block_size =
+	//  ((struct mac_driver_desc *)block_buffer)->block_size;
 
      map_size = 1;
      for (block=1; block < map_size + 1; block++)
@@ -172,12 +174,15 @@ partition_fdisk_lookup( const char *dev_name, prom_handle disk,
 
      for (partition=1; partition <= 4 ;partition++, part++) {
 	  if (part->sys_ind == LINUX_NATIVE || part->sys_ind == LINUX_RAID) {
+			uint32_t start, size;
+			memcpy(&start, part->start4, sizeof start);
+			memcpy(&size, part->size4, sizeof size);
 	       add_new_partition(  list,
 				   partition,
 				   "Linux", /* type */
 				   '\0', /* name */
-				   le32_to_cpu(*(unsigned int *)part->start4),
-				   le32_to_cpu(*(unsigned int *)part->size4),
+				   le32_to_cpu(start),
+				   le32_to_cpu(size),
 				   512 /*blksize*/,
 				   part->sys_ind /* partition type */ );
 	  }
@@ -337,12 +342,12 @@ partitions_lookup(const char *device)
      struct partition_t* list = NULL;
      unsigned int prom_blksize, iso_root_block;
 
-     strncpy(block_buffer, device, 2040);
+     strncpy((char *)block_buffer, device, 2040);
      if (_machine != _MACH_bplan)
-	  strcat(block_buffer, ":0");
+	  strcat((char *)block_buffer, ":0");
 
      /* Open device */
-     disk = prom_open(block_buffer);
+     disk = prom_open((char *)block_buffer);
      if (disk == NULL) {
 	  prom_printf("Can't open device <%s>\n", block_buffer);
 	  goto bail;

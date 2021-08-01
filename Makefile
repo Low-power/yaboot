@@ -38,9 +38,8 @@ endif
 
 # The flags for the yaboot binary.
 #
-YBCFLAGS = -Os $(CFLAGS) -nostdinc -Wall -fsigned-char
-YBCFLAGS += -fno-stack-protector
-YBCFLAGS += -D VERSION=\"${VERSION}${VERSIONEXTRA}\"   #"
+YBCFLAGS = -Os $(CFLAGS) -nostdinc -Wall -Werror=implicit-function-declaration -Werror=sequence-point -fsigned-char -fno-common -fno-stack-protector
+YBCFLAGS += -D VERSION=\"${VERSION}${VERSIONEXTRA}\"	#"
 YBCFLAGS += -D TEXTADDR=$(TEXTADDR) -D DEBUG=$(DEBUG)
 YBCFLAGS += -D MALLOCADDR=$(MALLOCADDR) -D MALLOCSIZE=$(MALLOCSIZE)
 YBCFLAGS += -D KERNELADDR=$(KERNELADDR)

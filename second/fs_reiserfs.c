@@ -59,7 +59,7 @@ static struct reiserfs_state *INFO = &reiserfs;
 
 /* Adapted from GRUB: */
 static char FSYS_BUF[FSYSREISER_CACHE_SIZE];
-int errnum;
+static int errnum;
 
 
 static int
@@ -216,14 +216,16 @@ block_read( __u32 blockNr, __u32 start, __u32 len, char *buffer )
 	  if ( *journal_table != 0xffffffff )
 	  {
 	       /* Search for the blockNr in cached journal */
-	       j_len = le32_to_cpu(*journal_table++);
+	       j_len = le32_to_cpu(*journal_table);
+			journal_table++;
 	       while ( i++ < j_len )
 	       {
-		    if ( le32_to_cpu(*journal_table++) == blockNr )
+		    if ( le32_to_cpu(*journal_table) == blockNr )
 		    {
-			 journal_table += j_len - i;
+			 journal_table += 1 + j_len - i;
 			 goto found;
 		    }
+				journal_table++;
 	       }
 	  }
 	  else
@@ -237,9 +239,10 @@ block_read( __u32 blockNr, __u32 start, __u32 len, char *buffer )
 		    return 0;
 
 	       j_len = le32_to_cpu(desc.j_len);
-	       while ( i < j_len && i < JOURNAL_TRANS_HALF )
-		    if ( le32_to_cpu(desc.j_realblock[i++]) == blockNr )
-			 goto found;
+	       while ( i < j_len && i < JOURNAL_TRANS_HALF ) {
+				if ( le32_to_cpu(desc.j_realblock[i]) == blockNr ) goto found;
+				i++;
+			}
 
 	       if ( j_len >= JOURNAL_TRANS_HALF )
 	       {
@@ -249,9 +252,10 @@ block_read( __u32 blockNr, __u32 start, __u32 len, char *buffer )
 					sizeof(commit), (char *) &commit ) )
 			 return 0;
 
-		    while ( i < j_len )
-			 if ( le32_to_cpu(commit.j_realblock[i++ - JOURNAL_TRANS_HALF]) == blockNr )
-			      goto found;
+		    while ( i < j_len ) {
+					if ( le32_to_cpu(commit.j_realblock[i - JOURNAL_TRANS_HALF]) == blockNr ) goto found;
+					i++;
+				}
 	       }
 	  }
 	  goto not_found;
@@ -616,7 +620,8 @@ next_key( void )
 	       cache = CACHE( depth );
 	  else
 	  {
-	       cache = read_tree_node( INFO->blocks[depth], --depth );
+	       cache = read_tree_node( INFO->blocks[depth], depth-1 );
+			depth--;
 	       if ( !cache )
 		    return 0;
 	  }
@@ -635,7 +640,7 @@ next_key( void )
 		    INFO->next_key_nr[depth] = 0;
 
 	       cache =
-		    read_tree_node( dc_block_number( &(DC( cache )[key_nr])),
+		    read_tree_node( dc_block_number(DC( cache ) + key_nr),
 				    --depth );
 	       if ( !cache )
 		    return 0;
