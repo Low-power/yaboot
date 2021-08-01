@@ -2,36 +2,39 @@
 
 include Config
 
-VERSION = 1.3.16
+VERSION := 1.3.16
+
 # Debug mode (spam/verbose)
-DEBUG = 0
+DEBUG ?= 0
 # make install vars
-ROOT =
-PREFIX = usr/local
-MANDIR = man
+#ROOT ?=
+PREFIX ?= usr/local
+MANDIR ?= share/man
 # command used to get root (needed for tarball creation)
 GETROOT = fakeroot
 
 # We use fixed addresses to avoid overlap when relocating
 # and other trouble with initrd
 
-# Load the bootstrap at 2Mb
+# Load the bootstrap at 2MiB
 TEXTADDR	= 0x200000
-# Malloc block at 3Mb -> 4Mb
+# Malloc block at 3MiB ~ 4MiB
 MALLOCADDR	= 0x300000
 MALLOCSIZE	= 0x100000
 # Load kernel and ramdisk at real-base.  If there is overlap, will retry until find open space
 KERNELADDR	= 0x00C00000
 
 # Set this to the prefix of your cross-compiler, if you have one.
-# Else leave it empty.
+# Else leave it empty or undefined.
 #
-CROSS =
+#CROSS :=
 
+ifdef CROSS
 CC		:= $(CROSS)gcc
 LD		:= $(CROSS)ld
 AS		:= $(CROSS)as
 OBJCOPY		:= $(CROSS)objcopy
+endif
 
 # The flags for the yaboot binary.
 #
@@ -70,7 +73,7 @@ LDFLAGS += --Ttext $(TEXTADDR) --static -m elf32ppclinux
 
 # Libraries
 #
-LLIBS = -lext2fs
+LLIBS := -lext2fs
 
 # For compiling userland utils
 #
@@ -151,8 +154,7 @@ bindist: all
 
 clean:
 	rm -f second/yaboot util/addnote util/elfextract $(OBJS)
-	#-gunzip man/*.gz
-	rm -rf man.deb
+	#rm -rf man.deb
 
 cleandocs:
 	make -C doc clean
@@ -190,7 +192,6 @@ install: all strip
 	install -o root -g root -m 0755 ybin/yabootconfig ${ROOT}/${PREFIX}/sbin/yabootconfig
 	rm -f ${ROOT}/${PREFIX}/sbin/mkofboot
 	ln -s ybin ${ROOT}/${PREFIX}/sbin/mkofboot
-	#@gzip -9 man/*.[58]
 	install -o root -g root -m 0644 man/bootstrap.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/bootstrap.8
 	install -o root -g root -m 0644 man/mkofboot.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/mkofboot.8
 	install -o root -g root -m 0644 man/ofpath.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/ofpath.8
@@ -198,7 +199,6 @@ install: all strip
 	install -o root -g root -m 0644 man/yabootconfig.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/yabootconfig.8
 	install -o root -g root -m 0644 man/ybin.8 ${ROOT}/${PREFIX}/${MANDIR}/man8/ybin.8
 	install -o root -g root -m 0644 man/yaboot.conf.5 ${ROOT}/${PREFIX}/${MANDIR}/man5/yaboot.conf.5
-	#@gunzip man/*.gz
 	@if [ ! -e ${ROOT}/boot/yaboot.conf ] ; then						\
 		set -x;										\
 		install -o root -g root -m 0644 doc/examples/yaboot.conf ${ROOT}/boot/yaboot.conf;\
