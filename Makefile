@@ -3,6 +3,7 @@
 include Config
 
 VERSION := 1.3.16
+VERSIONEXTRA := -rivoreo-r2
 
 # Debug mode (spam/verbose)
 DEBUG ?= 0
@@ -66,7 +67,7 @@ endif
 
 # Link flags
 #
-LDFLAGS += --Ttext $(TEXTADDR) --static -m elf32ppclinux
+LDFLAGS += --Ttext $(TEXTADDR) --static -m elf32ppc
 
 # Libraries
 #
@@ -118,9 +119,9 @@ elfextract:
 
 mkofboot:
 	ln -sf ybin ybin/mkofboot
-	@if [ $$(grep '^VERSION=' ybin/ybin | cut -f2 -d=) != ${VERSION} ] ; then	\
-		echo "ybin/ybin: warning: VERSION  mismatch"; 				\
-		false; 									\
+	@if [ "`grep ^VERSION= ybin/ybin | cut -f 2 -d =`" != "$(VERSION)$(VERSIONEXTRA)" ]; then \
+		echo "VERSION mismatch in ybin/ybin"; \
+		false; \
 	fi
 
 %.o: %.c
