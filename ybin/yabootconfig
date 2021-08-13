@@ -32,7 +32,7 @@ CONFIG=boot/yaboot.conf
 NOINSTALL=0
 QUIET=0
 DEBUG=0
-SIGINT="$PRG: Interrupt caught ... exiting"
+SIGINT_MSG="$PRG: Interrupt caught ... exiting"
 export LC_COLLATE=C
 
 ## avoid older versions of ofpath shipped in debian boot-floppies etc.
@@ -45,7 +45,7 @@ fi
 ## catch signals, clean up temporary file
 trap "cleanup" 0
 trap "exit 129" 1
-trap "echo 1>&2 $SIGINT ; exit 130" 2
+trap "echo 1>&2 '$SIGINT_MSG'; exit 130" INT
 trap "exit 131" 3
 trap "exit 143" 15
 
@@ -67,9 +67,7 @@ fi
 
 ## make fake `id' if its missing, outputs 0 since if its missing we
 ## are probably running on boot floppies and thus are root.
-if (command -v id > /dev/null 2>&1) ; then
-    true
-else
+if ! command -v id > /dev/null 2>&1; then
     id()
     {
     echo 0
@@ -117,7 +115,7 @@ confirm()
 {
     $PRINTF \
 "yaboot is the Linux Loader for PowerPC.  $PRG sets up your system to boot directly
-from your hard disk, without the need for a boot CD, floppy or a network boot.\n"
+from your hard disk, without the need for a boot CD, floppy or a network boot.\\n"
 [ "$NOINSTALL" = 0 ] && $PRINTF "Install yaboot bootstrap on $BOOT to boot Linux from $ROOT? [Yes] "
 [ "$NOINSTALL" = 1 ] && $PRINTF "Create simple ${CHROOT}${CONFIG} to boot Linux from $ROOT? [Yes] "
     read ans
@@ -152,42 +150,44 @@ from your hard disk, without the need for a boot CD, floppy or a network boot.\n
 ## find out whether we have mac-fdisk or pdisk (they work the same)
 ckmacfdisk()
 {
-    if (command -v mac-fdisk > /dev/null 2>&1) ; then
-	FDISK=mac-fdisk
-    elif (command -v pdisk > /dev/null 2>&1) ; then
-	FDISK=pdisk
-    else
-	echo 1>&2 "$PRG: Unable to locate mac-fdisk"
-	return 1
-    fi
+	local path
+	if path="`command -v mac-fdisk 2> /dev/null`"; then
+		FDISK=mac-fdisk
+	elif path="`command -v pdisk 2> /dev/null`"; then
+		FDISK=pdisk
+	else
+		echo 1>&2 "$PRG: Unable to locate mac-fdisk"
+		return 1
+	fi
 
-    if [ ! -x `command -v $FDISK` 2> /dev/null ] ; then
-	echo 1>&2 "$PRG: `command -v $FDISK`: Permission denied"
-	return 1
-    fi
-    debug "mac-fdisk is: $FDISK\n"
-    return 0
+	if [ ! -x "$path" ]; then
+		$PRINTF "%s: %s: Permission denied\\n" "$PRG" "$path" 1>&2
+		return 1
+	fi
+	debug "mac-fdisk is: $FDISK\\n"
+	return 0
 }
 
 ## find out if we have ddisk or fdisk (fdisk for dos labels) debian
 ## uses both names
 ckfdisk()
 {
-    if (command -v ddisk > /dev/null 2>&1) ; then
-	FDISK=ddisk
-    elif (command -v fdisk > /dev/null 2>&1) ; then
-	FDISK=fdisk
-    else
-	echo 1>&2 "$PRG: Unable to locate fdisk"
-	return 1
-    fi
+	local path
+	if path="`command -v ddisk 2> /dev/null`"; then
+		FDISK=ddisk
+	elif path="`command -v fdisk 2> /dev/null`"; then
+		FDISK=fdisk
+	else
+		echo 1>&2 "$PRG: Unable to locate fdisk"
+		return 1
+	fi
 
-    if [ ! -x `command -v $FDISK` 2> /dev/null ] ; then
-	echo 1>&2 "$PRG: `command -v $FDISK`: Permission denied"
-	return 1
-    fi
-    debug "fdisk is: $FDISK\n"
-    return 0
+	if [ ! -x "$path" ]; then
+		$PRINTF "%s: %s: Permission denied\\n" "$PRG" "$path" 1>&2
+		return 1
+	fi
+	debug "fdisk is: $FDISK\\n"
+	return 0
 }
 
 ## find bootstrap partition, supports IBM CHRP with msdos disklabels
@@ -198,16 +198,16 @@ findbootblock()
 	ckmacfdisk || return 1
 	if [ "$FDISK" = pdisk ] ; then
 	    ## handle braindamaged pdisk
-	    debug "dealing with pdisk deficiency...\n"
+	    debug "dealing with pdisk deficiency...\\n"
 	    BOOT="$(v=`$FDISK -l "$DISK" 2>/dev/null | grep '\<Apple_Bootstrap\>'` ; echo ${v%%:*})"
-	    debug "BOOT before fixup: $BOOT\n"
+	    debug "BOOT before fixup: $BOOT\\n"
 	    if [ -n "$BOOT" ] ; then
 		BOOT="${DISK}${BOOT}"
 	    fi
-	    debug "BOOT after fixup: $BOOT\n"
+	    debug "BOOT after fixup: $BOOT\\n"
 	else
 	    BOOT="$(v=`$FDISK -l "$DISK" 2>/dev/null | grep '\<Apple_Bootstrap\>'` ; echo ${v%%[ ]*})"
-	    debug "BOOT=$BOOT\n"
+	    debug "BOOT=$BOOT\\n"
 	fi
 	if [ -z "$BOOT" ] ; then
 	    echo 1>&2 "$PRG: Unable to locate bootstrap partition on $DISK..."
@@ -217,7 +217,7 @@ findbootblock()
     else
 	ckfdisk || return 1
 	BOOT="$(v=`$FDISK -l "$DISK" 2>/dev/null | grep '\<PPC PReP Boot\>'` ; echo ${v%%[ ]*})"
-	debug "BOOT=$BOOT\n"
+	debug "BOOT=$BOOT\\n"
 	if [ -z "$BOOT" ] ; then
 	    echo 1>&2 "$PRG: Unable to locate bootstrap partition on $DISK..."
 	    echo 1>&2 "$PRG: You must create an 800K type: 0x41 PPC PReP Boot partition to make the disk bootable"
@@ -228,14 +228,12 @@ findbootblock()
 }
 
 ## if readlink is missing use a kludge
-if (command -v readlink > /dev/null 2>&1) ; then
-    true
-else
+if ! command -v readlink > /dev/null 2>&1; then
     readlink()
     {
 	SYMTARGET="$(v=`ls -l "$2" 2>/dev/null` ; echo ${v##*> })"
 	if [ -n "$SYMTARGET" ] ; then
-	    echo "$SYMTARGET"
+	    $PRINTF %s\\n "$SYMTARGET"
 	    return 0
 	else
 	    return 1
@@ -258,7 +256,7 @@ ckdevfs()
 
 cleanup()
 {
-    if [ -n "$TMPCONF" ] ; then rm -f "$TMPCONF" ; fi
+    [ -n "$TMPCONF" ] && rm -f "$TMPCONF"
     return 0
 }
 
@@ -341,7 +339,7 @@ if [ $# != 0 ] ; then
     done
 fi
 
-if [ `id -u` != 0 ] ; then
+if [ "`id -u`" != 0 ] ; then
     echo 1>&2 "$PRG: You are not root, go away"
     exit 1
 fi
@@ -381,7 +379,7 @@ fi
 if [ -z "$ROOT" ] ; then
     ## IMPORTANT! that last substitution is [<space><tab>] thats all ash will grok
     ROOT="$(v=`grep '^[^#].*[[:blank:]]/[[:blank:]]' ${CHROOT}etc/fstab` ; echo ${v%%[ 	]*})"
-    debug "ROOT=$ROOT\n"
+    debug "ROOT=$ROOT\\n"
     if [ -z "$ROOT" ] ; then
 	echo 1>&2 "$PRG: Could not determine root partition, aborting..."
 	exit 1
@@ -391,12 +389,11 @@ fi
 ## dereference label or uuid if necessary
 case "$ROOT" in
     LABEL=*|UUID=*)
-	if ! (command -v findfs > /dev/null 2>&1) ; then
+	if ! command -v findfs > /dev/null 2>&1; then
 	    echo 1>&2 "$PRG: Unable to locate findfs, aborting..."
 	    exit 1
 	fi
-	ROOT="$(findfs "$ROOT")"
-	if [ -z "$ROOT" -o $? != 0 ] ; then
+	if ! ROOT="$(findfs "$ROOT")" || [ -z "$ROOT" ]; then
 	    echo 1>&2 "$PRG: Could not determine root partition, aborting..."
 	    exit 1
 	fi
@@ -451,9 +448,10 @@ if [ "$QUIET" = 0 ] ; then
 fi
 
 READLINKKV=`readlink /usr/src/linux`
+KERNEL_RELEASE="`uname -r`"
 ## find the kernel in the usual places and (if not --quiet) ask the
 ## user if we cannot find one.
-for k in "vmlinux" "vmlinux-`uname -r`" "vmlinux-`uname -r`" "$READLINKKV" ; do
+for k in "vmlinux" "vmlinux-$KERNEL_RELEASE" "$READLINKKV" ; do
 	if [ -f "${CHROOT}${k}" ] ; then
 	    KERNEL="${CHROOT}${k}"
 	    break;
@@ -463,7 +461,7 @@ for k in "vmlinux" "vmlinux-`uname -r`" "vmlinux-`uname -r`" "$READLINKKV" ; do
 	fi
 done
 
-for i in "initrd" "initrd-`uname -r`" "`echo $READLINKKV | cut -f1 -d- --complement`" ; do
+for i in "initrd" "initrd-$KERNEL_RELEASE" "`printf '%s\\n' \"$READLINKKV\" | cut -f 1 -d - --complement`" ; do
     for b in "" "boot/" ; do
 	    if [ -f "${CHROOT}${b}${i}" ] ; then
 		INITRD="${CHROOT}${b}${i}"
@@ -538,8 +536,8 @@ elif [ ! -f "$KERNEL" ] ; then
     exit 1
 fi
 
-debug "KERNEL=$KERNEL\n"
-debug "INITRD=$INITRD\n"
+debug "KERNEL=$KERNEL\\n"
+debug "INITRD=$INITRD\\n"
 
 ## get partition number the kernel lives on, and the OF device= name
 ## of the whole disk.
@@ -569,10 +567,22 @@ if [ -n "$INITRD" ] ; then
     fi
 fi
 
-debug "KERNEL=$KERNEL\nKERNDEV=$KERNDEV\nKERNDIR=$KERNDIR\nLINKDEV=$LINKDEV\nPARTITION=$PARTITION\nKERNELDISK=$KERNELDISK\n"
+debug "KERNEL=$KERNEL
+KERNDEV=$KERNDEV
+KERNDIR=$KERNDIR
+LINKDEV=$LINKDEV
+PARTITION=$PARTITION
+KERNELDISK=$KERNELDISK
+"
 
 if [ -n "$INITRD" ] ; then
-    debug "INITRD=$INITRD\nIRDDEV=$IRDDEV\nIRDDIR=$IRDDIR\nIRDLINKDEV=$IRDLINKDEV\nIRDPARTITION=$IRDPARTITION\nINITRDDISK=$INITRDDISK\n"
+    debug "INITRD=$INITRD
+IRDDEV=$IRDDEV
+IRDDIR=$IRDDIR
+IRDLINKDEV=$IRDLINKDEV
+IRDPARTITION=$IRDPARTITION
+INITRDDISK=$INITRDDISK
+"
 fi
 
 ## sanity check
@@ -628,9 +638,8 @@ if [ -n "$INITRD" ] ; then
 fi
 
 ## only powermacs appear to need device=
-if (cat /proc/cpuinfo 2>/dev/null | grep -q pmac-generation 2> /dev/null) ; then
-    DEVICE="\ndevice=$($OFPATH $KERNELDISK)"
-    if [ $? != 0 ] ; then
+if cat /proc/cpuinfo 2>/dev/null | grep -Fq pmac-generation 2> /dev/null; then
+    if ! DEVICE="\\ndevice=$($OFPATH $KERNELDISK)"; then
 	echo 1>&2 "$PRG: Unable to determine OpenFirmware device name to $KERNELDISK, aborting..."
 	exit 1
     fi
@@ -697,9 +706,9 @@ fi
 ## newworld powermacs need the ofboot first stage loader
 if [ "$(v=`cat /proc/cpuinfo 2>/dev/null | grep pmac-generation` ; echo ${v##*:})" = NewWorld ] ; then
     if [ -f /usr/local/lib/yaboot/ofboot ] ; then
-	OFBOOT="\nmagicboot=/usr/local/lib/yaboot/ofboot"
+	OFBOOT="\\nmagicboot=/usr/local/lib/yaboot/ofboot"
     elif [ -f /usr/lib/yaboot/ofboot ] ; then
-	OFBOOT="\nmagicboot=/usr/lib/yaboot/ofboot"
+	OFBOOT="\\nmagicboot=/usr/lib/yaboot/ofboot"
     else
 	echo 1>&2 "$PRG: yaboot is not installed correctly"
 	exit 1
@@ -708,26 +717,26 @@ fi
 
 ## check for properly (read debian) packaged yaboot.
 if [ -d ${CHROOT}usr/share/doc/yaboot/examples ] ; then
-    HEADER="## see also: /usr/share/doc/yaboot/examples for example configurations.\n"
+    HEADER="## see also: /usr/share/doc/yaboot/examples for example configurations.\\n"
 fi
 
 ## setup append line
 if [ -n "$KERNARGS" ] ; then
-    APPEND="\tappend=\"${KERNARGS}\"\n"
+    APPEND="	append=\"${KERNARGS}\"\\n"
 fi
 
 ## avoid user confusion when they boot an installer with video=ofonly
 ## (usually via a install-safe label) and then reboot and have the box
 ## not boot properly again.
 if [ -z "$APPEND" ] ; then
-    if (grep -q '\<video=ofonly\>' /proc/cmdline 2> /dev/null) ; then
-	APPEND="\tappend=\"video=ofonly\"\n"
+    if grep -q '\<video=ofonly\>' /proc/cmdline 2> /dev/null; then
+	APPEND="	append=\"video=ofonly\"\\n"
     fi
 fi
 
 ## generate initrd= lines
 if [ -n "$INITRDIMG" ] ; then
-    INITRDIMGS="\tinitrd=$INITRDIMG\n\tinitrd-size=8192\n"
+    INITRDIMGS="	initrd=$INITRDIMG\\n	initrd-size=8192\\n"
 fi
 
 ## Get a symlink which always points to the correct block device.
@@ -746,7 +755,7 @@ devsymlink() {
 ## Get UUID= or LABEL= for the given unix partition block device.
 ## If it could not be determined, give the unix partition block device back.
 uuidlabel() {
-  echo `devsymlink "$1" nobyid` \
+  devsymlink "$1" nobyid \
   | sed -e "s,/dev/disk/by-uuid/,UUID=," \
         -e "s,/dev/disk/by-label/,LABEL=,"
 }
@@ -757,29 +766,28 @@ GLOBAL="## yaboot.conf generated by $PRG $VERSION
 ## run: \"man yaboot.conf\" for details. Do not make changes until you have!!
 ${HEADER}##
 ## For a dual-boot menu, add one or more of:
-## bsd=/dev/hdaX, macos=/dev/hdaY, macosx=/dev/hdaZ\n
+## bsd=/dev/hdaX, macos=/dev/hdaY, macosx=/dev/hdaZ\\n
 boot=\"`devsymlink "${BOOT}"`\"${DEVICE:-}
 partition=$PARTITION
 root=\"`uuidlabel "${ROOT}"`\"
 timeout=30
-install=${INSTALL}${OFBOOT:-}\n"
+install=${INSTALL}${OFBOOT:-}\\n"
 
 ## generate image= section
 IMAGES="
 image=$IMAGE
-\tlabel=Linux
-\tread-only\n${APPEND:-}${INITRDIMGS:-}"
+	label=Linux
+	read-only
+${APPEND:-}${INITRDIMGS:-}"
 
 ## safely create a tmp file then move it into place after we are sure
 ## it was written.
-TMPCONF=`mktemp -q "${CHROOT}${CONFIG}.XXXXXX"`
-if [ $? != 0 ] ; then
+if ! TMPCONF=`mktemp -q "${CHROOT}${CONFIG}.XXXXXX"`; then
     echo 1>&2 "$PRG: Unable to write to ${CHROOT}${CONFIG%/*}"
     exit 1
 fi
 
-$PRINTF "${GLOBAL}${IMAGES}" > "$TMPCONF"
-if [ $? != 0 ] ; then
+if ! $PRINTF "${GLOBAL}${IMAGES}" > "$TMPCONF"; then
     echo 1>&2 "$PRG: Unable to write temporary file ${TMPCONF}, aborting..."
     exit 1
 fi
@@ -788,16 +796,14 @@ fi
 if [ -f "${CHROOT}${CONFIG}.old" ] ; then
     for i in 1 0 ; do
 	if [ -f "${CHROOT}${CONFIG}.old.${i}" ] ; then
-	    mv -f "${CHROOT}${CONFIG}.old.$i" "${CHROOT}${CONFIG}.old.$(($i + 1))"
-	    if [ $? != 0 ] ; then
+	    if ! mv -f "${CHROOT}${CONFIG}.old.$i" "${CHROOT}${CONFIG}.old.$((i+1))"; then
 		echo 1>&2 "$PRG: Unable to make backup of existing ${CHROOT}${CONFIG}.old.$i, aborting..."
 		exit 1
 	    fi
 	fi
     done
 
-    mv -f "${CHROOT}${CONFIG}.old" "${CHROOT}${CONFIG}.old.0"
-    if [ $? != 0 ] ; then
+    if ! mv -f "${CHROOT}${CONFIG}.old" "${CHROOT}${CONFIG}.old.0"; then
 	echo 1>&2 "$PRG: Unable to make backup of existing ${CHROOT}${CONFIG}.old, aborting..."
 	exit 1
     fi
@@ -805,21 +811,19 @@ fi
 
 ## backup /boot/yaboot.conf
 if [ -f "${CHROOT}${CONFIG}" ] ; then
-    mv -f "${CHROOT}${CONFIG}" "${CHROOT}${CONFIG}.old"
-    if [ $? != 0 ] ; then
+    if ! mv -f "${CHROOT}${CONFIG}" "${CHROOT}${CONFIG}.old"; then
 	echo 1>&2 "$PRG: Unable to make backup of existing ${CHROOT}${CONFIG}, aborting..."
 	exit 1
     fi
 fi
 
 ## move new config into place
-mv -f "${TMPCONF}" "${CHROOT}${CONFIG}"
-if [ $? != 0 ] ; then
-    echo "$PRG: Unable to write file ${CHROOT}${CONFIG}"
-    exit 1
+if mv -f "${TMPCONF}" "${CHROOT}${CONFIG}"; then
+	## nothing sensitive in generated config, comply with debian policy
+	chmod 644 "${CHROOT}${CONFIG}"
 else
-    ## nothing sensitive in generated config, comply with debian policy
-    chmod 644 "${CHROOT}${CONFIG}"
+	echo "$PRG: Unable to write file ${CHROOT}${CONFIG}"
+	exit 1
 fi
 
 ## tell mkofboot where to find the config file if necessary
@@ -829,7 +833,7 @@ fi
 
 ## run mkofboot to install the bootstrap, unless --noinstall
 if [ "$NOINSTALL" = 0 ] ; then
-    if (command -v mkofboot 2>&1 > /dev/null) ; then
+    if command -v mkofboot > /dev/null 2>&1; then
 	[ "$QUIET" = 0 ] && echo "Running mkofboot to make the disk bootable..."
 	mkofboot -f $YBINARGS || exit 1
 	[ "$QUIET" = 0 ] && echo "Done"

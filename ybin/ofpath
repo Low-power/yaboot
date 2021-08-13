@@ -68,9 +68,9 @@ smallseq()
     local n=1
     echo 1
     while [ "$v" -gt 1 ] ; do
-	echo "$(($n + 1))"
-	local n="$(($n + 1))"
-	local v="$(($v - 1))"
+	n=$((n+1))
+	echo $n
+	v=$((v-1))
     done
     return 0
 }
@@ -80,12 +80,13 @@ smallseq()
 ## per device, + 1 "Attached Devices:" line.
 linecount()
 {
+	local file v
     if [ $# = 0 ] ; then
-	local file="$(cat)"
-	local v="$file"
+		file="$(cat)"
+		v="$file"
     else
-	local file="$(cat $1)"
-	local v="$file"
+		file="$(cat $1)"
+		v="$file"
     fi
 
     if [ -z "$file" ] ; then
@@ -93,17 +94,14 @@ linecount()
 	return 0
     fi
 
-    ## use real wc if available
-    if (command -v wc > /dev/null 2>&1) ; then
-	if [ -x `command -v wc` ] ; then
-	    lines="$(echo "$file" | wc -l)"
-	    if [ $? = 0 ] ; then
-		echo $lines
-		unset lines
-		return 0
-	    fi
+	## use real wc if available
+	if command -v wc > /dev/null 2>&1 && [ -x `command -v wc` ] ; then
+		if lines="`printf '%s\\n' \"$file\" | wc -l`"; then
+			echo "$lines"
+			unset lines
+			return 0
+		fi
 	fi
-    fi
 
     while true ; do
 	for i in `smallseq 145` ; do
@@ -139,23 +137,26 @@ smalltr()
 ## usage: lgrep filename regexp regexp ...
 lgrep()
 {
-    local f="$1"
-    shift
-    for i in "$@" ; do
-	echo "$(cat "$f")" | grep -q "$i" && echo "$f" && break
-    done
-    return 0
+	local f buffer
+	f="$1"
+	buffer="`cat \"$f\"`" || return
+	shift
+	for e in "$@" ; do
+		if printf %s\\n "$buffer" | grep -q "$e"; then
+			printf %s\\n "$f"
+			break
+		fi
+	done
+	return 1
 }
 
 ## if readlink is missing use a kludge
-if (command -v readlink > /dev/null 2>&1) ; then
-    true
-else
+if ! command -v readlink > /dev/null 2>&1; then
     readlink()
     {
         local SYMTARGET="$(v=`ls -l "$1" 2>/dev/null` ; echo ${v##*> })"
         if [ -n "$SYMTARGET" ] ; then
-            echo "$SYMTARGET"
+            printf %s\\n "$SYMTARGET"
             return 0
         else
             return 1
@@ -188,13 +189,13 @@ printhost()
 # read OpenFirmware device path from its corresponding devspec
 find_of_path()
 {
-  [ -z "$1" ] && return
-  [ -f "$1/devspec" ] && {
-    OF_PATH="`cat $1/devspec`"
-    SYS_PATH="$1"
-    return
-  }
-  find_of_path "${1%/*}"
+	[ -z "$1" ] && return
+	if [ -f "$1/devspec" ]; then
+		OF_PATH="`cat $1/devspec`"
+		SYS_PATH="$1"
+		return
+	fi
+	find_of_path "${1%/*}"
 }
 
 ## this finds information we need on both newworld and oldworld macs.
@@ -266,37 +267,37 @@ scsi_ofpath()
 {
   if [ -d "/proc/device-tree$OF_PATH/sas" ] ; then
 
-    SAS_ID=$(( ($BUS_ID << 16) | ($DEVICE_ID << 8) | $LUN_ID))
-    printf "%s/sas/disk@%x%s\n" $OF_PATH $SAS_ID $LUNX$PART
+    SAS_ID=$(( (BUS_ID << 16) | (DEVICE_ID << 8) | LUN_ID))
+    printf "%s/sas/disk@%x%s\\n" $OF_PATH $SAS_ID $LUNX$PART
 
   elif [ -d "/proc/device-tree$OF_PATH/scsi@`printf %x $BUS_ID`" ] ; then
 
-    printf "%s/scsi@%x/@%x%s\n" $OF_PATH $BUS_ID $DEVICE_ID $LUNX$PART
+    printf "%s/scsi@%x/@%x%s\\n" $OF_PATH $BUS_ID $DEVICE_ID $LUNX$PART
 
   else
 
     case "$SCSI_DRIVER-$SCSI_NAME" in
       aic7xxx-*|sym53c8xx-*|mesh-*|*-scsi)
-        printf "%s/@%x%s\n" $OF_PATH $DEVICE_ID $LUNX$PART
+        printf "%s/@%x%s\\n" $OF_PATH $DEVICE_ID $LUNX$PART
         ;;
       sata_sil-*|sata_vsc-*)
-        printf "%s/@%x%s\n" $OF_PATH $(($PLUG_ID * 2)) $PART
+        printf "%s/@%x%s\\n" $OF_PATH $((PLUG_ID*2)) $PART
         ;;
       sata_svw-*|*-pci-ata)
-        printf "%s/@%x/@%x%s\n" $OF_PATH $PLUG_ID $DEVICE_ID $PART
+        printf "%s/@%x/@%x%s\\n" $OF_PATH $PLUG_ID $DEVICE_ID $PART
         ;;
       pata_macio-*)
-        printf "%s/@%x%s\n" $OF_PATH $DEVICE_ID $PART
+        printf "%s/@%x%s\\n" $OF_PATH $DEVICE_ID $PART
         ;;
       sbp2-*)
         IEEE1394_ID=${IEEE1394_ID:?}
-        printf "%s/node@%s/sbp-2/@%x%s\n" $OF_PATH $IEEE1394_ID $DEVICE_ID $PART
+        printf "%s/node@%s/sbp-2/@%x%s\\n" $OF_PATH $IEEE1394_ID $DEVICE_ID $PART
         ;;
       ipr-obsidian)
-        printf "%s/@%x,%x%s\n" $OF_PATH $BUS_ID $DEVICE_ID $LUNX$PART
+        printf "%s/@%x,%x%s\\n" $OF_PATH $BUS_ID $DEVICE_ID $LUNX$PART
         ;;
       *)
-        echo 1>&2 "${PRG}: ${SCSI_NAME} (${SCSI_DRIVER}) is not supported"
+        printf "%s: %s (%s) is not supported\\n" "${PRG}" "${SCSI_NAME}" "${SCSI_DRIVER}" 1>&2
         return 1
         ;;
     esac
@@ -319,17 +320,18 @@ ide_ofpath()
 	return 1
     fi
 
-    case "$(uname -r)" in
+	local kernel_release="`uname -r`"
+    case "$kernel_release" in
 	2.5.*|2.6.0*|2.6.1|2.6.1-*|2.6.2|2.6.2-*)
-	    echo 1>&2 "$PRG: Linux kernel `uname -r` is not supported"
+			printf "%s: Linux %s is not supported\\n" "$PRG" "$kernel_release" 1>&2
 	    return 1
 	    ;;
 	2.6.*|2.7.*)
-	    if ! (grep -q '.* .* sysfs ' /proc/mounts 2> /dev/null) ; then
+	    if ! grep -q '.* .* sysfs ' /proc/mounts 2> /dev/null; then
 		echo 1>&2 "$PRG: sysfs must be mounted for ofpath to support this system"
 		return 1
 	    fi
-	    local SYS="$(m=`grep '.* .* sysfs ' /proc/mounts | head -n 1` ; echo `d=${m#* };echo ${d%% *}`)"
+	    local SYS="$(m=`grep '.* .* sysfs ' /proc/mounts | head -n 1`; d=${m#* }; echo ${d%% *})"
 	    if [ -z "$SYS" -o ! -d "$SYS" ] ; then
 		echo 1>&2 "$PRG: Unable to determine sysfs mountpoint"
 		return 1
@@ -464,13 +466,13 @@ oldworld()
 		scsiinfo || return 1
 		case "$SCSI_DRIVER" in
 		    mesh)
-		    echo $(cat /proc/device-tree/$ALIASES/scsi-int)/sd\@$DEVICE_ID:$PARTITION
+		    printf "%s/sd@%s:%s\\n" "$(cat /proc/device-tree/$ALIASES/scsi-int)" "$DEVICE_ID" "$PARTITION"
 		    ;;
 		    53c94)
-		    echo $(cat /proc/device-tree/$ALIASES/scsi)/sd\@$DEVICE_ID:$PARTITION
+		    printf "%s/sd@%s:%s\\n" "$(cat /proc/device-tree/$ALIASES/scsi)" "$DEVICE_ID" "$PARTITION"
 		    ;;
 		    *)
-		    echo 1>&2 "$PRG: Driver $SCSI_DRIVER is not supported"
+		    printf "%s: Driver %s is not supported\\n" "$PRG" "$SCSI_DRIVER" 1>&2
 		    return 1
 		    ;;
 		esac
@@ -487,22 +489,22 @@ oldworld()
 		scsiinfo || return 1
 		case "$SCSI_DRIVER" in
 		    mesh)
-		    echo $(cat /proc/device-tree/$ALIASES/scsi)/sd\@$DEVICE_ID:$PARTITION
+		    printf "%s/sd@%s:%s\\n" "$(cat /proc/device-tree/$ALIASES/scsi)" "$DEVICE_ID" "$PARTITION"
 		    ;;
 		    *)
-		    echo 1>&2 "$PRG: Driver $SCSI_DRIVER is not supported"
+		    printf "%s: Driver %s is not supported\\n" "$PRG" "$SCSI_DRIVER" 1>&2
 		    return 1
 		    ;;
 		esac
 		;;
 		hda*)
-		echo $(cat /proc/device-tree/$ALIASES/ata)/ATA-Disk\@0:$PARTITION
+		printf "%s/ATA-Disk@0:%s\\n" "$(cat /proc/device-tree/$ALIASES/ata)" "$PARTITION"
 		;;
 		hdb*)
-		echo $(cat /proc/device-tree/$ALIASES/ata)/ATA-Disk\@1:$PARTITION
+		printf "%s/ATA-Disk@1:%s\\n" "$(cat /proc/device-tree/$ALIASES/ata)" "$PARTITION"
 		;;
 		hd*)
-		echo 1>&2 "$PRG: Device: /dev/$DEVNODE is not supported"
+		printf "%s: Device /dev/%s is not supported\\n" "$PRG" "$DEVNODE" 1>&2
 		;;
 	    esac
 	    ;;
@@ -512,22 +514,22 @@ oldworld()
 		scsiinfo || return 1
 		case "$SCSI_DRIVER" in
 		    mesh)
-		    echo $(cat /proc/device-tree/$ALIASES/scsi)/sd\@$DEVICE_ID:$PARTITION
+		    printf "%s/sd@%s:%s\\n" "$(cat /proc/device-tree/$ALIASES/scsi)" "$DEVICE_ID" "$PARTITION"
 		    ;;
 		    *)
-		    echo 1>&2 "$PRG: Driver $SCSI_DRIVER is not supported"
+		    printf "%s: Driver %s is not supported\\n" "$PRG" "$SCSI_DRIVER" 1>&2
 		    return 1
 		    ;;
 		esac
 		;;
 		hda*)
-		echo $(cat /proc/device-tree/$ALIASES/ata)/ata-disk\@0:$PARTITION
+		printf "%s/ata-disk@0:%s\\n" "$(cat /proc/device-tree/$ALIASES/ata)" "$PARTITION"
 		;;
 		hdb*)
-		echo $(cat /proc/device-tree/$ALIASES/ata)/ata-disk\@1:$PARTITION
+		printf "%s/ata-disk@1:%s\\n" "$(cat /proc/device-tree/$ALIASES/ata)" "$PARTITION"
 		;;
 		hd*)
-		echo 1>&2 "$PRG: Device: /dev/$DEVNODE is not supported"
+		printf "%s: Device /dev/%s is not supported\\n" "$PRG" "$DEVNODE" 1>&2
 		;;
 	    esac
 	    ;;
@@ -537,28 +539,28 @@ oldworld()
 		scsiinfo || return 1
 		case "$SCSI_DRIVER" in
 		    mesh)
-		    echo $(cat /proc/device-tree/$ALIASES/scsi)/sd\@$DEVICE_ID:$PARTITION
+		    printf "%s/sd@%s:%s\\n" "$(cat /proc/device-tree/$ALIASES/scsi)" "$DEVICE_ID" "$PARTITION"
 		    ;;
 		    *)
-		    echo 1>&2 "$PRG: Driver $SCSI_DRIVER is not supported"
+		    printf "%s: Driver %s is not supported\\n" "$PRG" "$SCSI_DRIVER" 1>&2
 		    return 1
 		    ;;
 		esac
 		;;
 		hda*)
-		echo $(cat /proc/device-tree/$ALIASES/ide0)/ata-disk\@0:$PARTITION
+		printf "%s/ata-disk@0:%s\\n" "$(cat /proc/device-tree/$ALIASES/ide0)" "$PARTITION"
 		;;
 		hdb*)
-		echo $(cat /proc/device-tree/$ALIASES/ide0)/ata-disk\@1:$PARTITION
+		printf "%s/ata-disk@1:%s\\n" "$(cat /proc/device-tree/$ALIASES/ide0)" "$PARTITION"
 		;;
 		hdc*)
-		echo $(cat /proc/device-tree/$ALIASES/ide1)/ata-disk\@0:$PARTITION
+		printf "%s/ata-disk@0:%s\\n" "$(cat /proc/device-tree/$ALIASES/ide1)" "$PARTITION"
 		;;
 		hdd*)
-		echo $(cat /proc/device-tree/$ALIASES/ide1)/ata-disk\@1:$PARTITION
+		printf "%s/ata-disk@1:%s\\n" "$(cat /proc/device-tree/$ALIASES/ide1)" "$PARTITION"
 		;;
 		hd*)
-		echo 1>&2 "$PRG: Device: /dev/$DEVNODE is not supported"
+		printf "%s: Device /dev/%s is not supported\\n" "$PRG" "$DEVNODE" 1>&2
 		;;
 	    esac
 	    ;;
@@ -578,28 +580,28 @@ oldworld()
 		scsiinfo || return 1
 		case "$SCSI_DRIVER" in
 		    mesh)
-		    echo $(cat /proc/device-tree/$ALIASES/scsi)/sd\@$DEVICE_ID:$PARTITON
+		    printf "%s/sd@%s:%s\\n" "$(cat /proc/device-tree/$ALIASES/scsi)" "$DEVICE_ID" "$PARTITION"
 		    ;;
 		    *)
-		    echo 1>&2 "$PRG: Driver $SCSI_DRIVER is not supported"
+		    printf "%s: Driver %s is not supported\\n" "$PRG" "$SCSI_DRIVER" 1>&2
 		    return 1
 		    ;;
 		esac
 		;;
 		hda*)
-		echo $(cat /proc/device-tree/$ALIASES/$ATA0)/ata-disk\@0:$PARTITION
+		printf "%s/ata-disk@0:%s\\n" "$(cat /proc/device-tree/$ALIASES/$ATA0)" "$PARTITION"
 		;;
 		hdb*)
-		echo $(cat /proc/device-tree/$ALIASES/$ATA0)/ata-disk\@1:$PARTITION
+		printf "%s/ata-disk@1:%s\\n" "$(cat /proc/device-tree/$ALIASES/$ATA0)" "$PARTITION"
 		;;
 		hdc*)
-		echo $(cat /proc/device-tree/$ALIASES/$ATA1)/atapi-disk\@0:$PARTITION
+		printf "%s/atapi-disk@0:%s\\n" "$(cat /proc/device-tree/$ALIASES/$ATA1)" "$PARTITION"
 		;;
 		hdd*)
-		echo $(cat /proc/device-tree/$ALIASES/$ATA1)/atapi-disk\@1:$PARTITION
+		printf "%s/atapi-disk@1:%s\\n" "$(cat /proc/device-tree/$ALIASES/$ATA1)" "$PARTITION"
 		;;
 		*)
-		echo 1>&2 "$PRG: Unsupported device: /dev/$DEVNODE"
+		printf "%s: Device /dev/%s is not supported\\n" "$PRG" "$DEVNODE" 1>&2
 		return 1
 		;;
 	    esac
@@ -610,37 +612,37 @@ oldworld()
 		scsiinfo || return 1
 		case "$SCSI_DRIVER" in
 		    mesh)
-		    echo $(cat /proc/device-tree/$ALIASES/scsi-int)/sd\@$DEVICE_ID:$PARTITON
+		    printf "%s/sd@%s:%s\\n" "$(cat /proc/device-tree/$ALIASES/scsi-int)" "$DEVICE_ID" "$PARTITION"
 		    ;;
 		    53c94)
-		    echo $(cat /proc/device-tree/$ALIASES/scsi)/sd\@$DEVICE_ID:$PARTITON
+		    printf "%s/sd@%s:%s\\n" "$(cat /proc/device-tree/$ALIASES/scsi)" "$DEVICE_ID" "$PARTITION"
 		    ;;
 		    *)
-		    echo 1>&2 "$PRG: Driver $SCSI_DRIVER is not supported"
+		    printf "%s: Driver %s is not supported\\n" "$PRG" "$SCSI_DRIVER" 1>&2
 		    return 1
 		    ;;
 		esac
 		;;
 		hda*)
-		echo $(cat /proc/device-tree/$ALIASES/ata0)/ata-disk\@0:$PARTITION
+		printf "%s/ata-disk@0:%s\\n" "$(cat /proc/device-tree/$ALIASES/ata0)" "$PARTITION"
 		;;
 		hdb*)
-		echo $(cat /proc/device-tree/$ALIASES/ata0)/ata-disk\@1:$PARTITION
+		printf "%s/ata-disk@1:%s\\n" "$(cat /proc/device-tree/$ALIASES/ata0)" "$PARTITION"
 		;;
 		hdc*)
-		echo $(cat /proc/device-tree/$ALIASES/ata1)/atapi-disk\@0:$PARTITION
+		printf "%s/atapi-disk@0:%s\\n" "$(cat /proc/device-tree/$ALIASES/ata1)" "$PARTITION"
 		;;
 		hdd*)
-		echo $(cat /proc/device-tree/$ALIASES/ata1)/atapi-disk\@1:$PARTITION
+		printf "%s/atapi-disk@1:%s\\n" "$(cat /proc/device-tree/$ALIASES/ata1)" "$PARTITION"
 		;;
 		hde*)
-		echo $(cat /proc/device-tree/$ALIASES/ata2):$PARTITION
+		printf "%s:%s\\n" "$(cat /proc/device-tree/$ALIASES/ata2)" "$PARTITION"
 		;;
 		hdf*)
-		echo $(cat /proc/device-tree/$ALIASES/ata3):$PARTITION
+		printf "%s:%s\\n" "$(cat /proc/device-tree/$ALIASES/ata3)" "$PARTITION"
 		;;
 		*)
-		echo 1>&2 "$PRG: Unsupported device: /dev/$DEVNODE"
+		printf "%s: Device /dev/%s is not supported\\n" "$PRG" "$DEVNODE" 1>&2
 		return 1
 		;;
 	    esac
@@ -690,6 +692,8 @@ ckdevfs()
 ## convert devfs names into normal short ones, written by Tom Rini.
 fixdevfs()
 {
+	local DEV
+
     ## get partition number, if any
     local PARTNUM="${1##*[a-z]}"
     ## Find the bus type.
@@ -707,20 +711,20 @@ fixdevfs()
 	    0)
 	    case "$TARGET" in
 		0)
-		local DEV=hda
+		DEV=hda
 		;;
 		1)
-		local DEV=hdb
+		DEV=hdb
 		;;
 	    esac
 	    ;;
 	    1)
 	    case "$TARGET" in
 		0)
-	        local DEV=hdc
+	        DEV=hdc
 	        ;;
 		1)
-		local DEV=hdd
+		DEV=hdd
 		;;
 	    esac
 	    ;;
@@ -728,7 +732,7 @@ fixdevfs()
 		echo 1>&2 "$PRG: $1: Unable to translate this device, try again without devfs."
 		return 1
 	esac
-	local DEV="${DEV}${PARTNUM}"
+	DEV="${DEV}${PARTNUM}"
 	echo "/dev/$DEV"
 	return 0
 	;;
@@ -749,39 +753,39 @@ fixdevfs()
 	local SCSILINES="$(($(linecount /proc/scsi/scsi) - 1))"
 	local PROCSCSI="$(cat /proc/scsi/scsi | tail -n $SCSILINES)"
 
-	for i in $(smallseq $(($SCSILINES / 3))) ; do
+	for i in $(smallseq $((SCSILINES/3))) ; do
 
 	    ## put every scsi device into one single line
-	    local DEVINFO="$(echo "$PROCSCSI" | head -n $(($i * 3)) | tail -n 3)"
+	    local DEVINFO="$(echo "$PROCSCSI" | head -n $((i*3)) | tail -n 3)"
 	    [ "$DEBUG" = 1 ] && echo 1>&2 "$PRG: DEBUG: fixdevfs: DEVINFO=$DEVINFO"
 
 	    ## cut the type field, expect "Direct-Access" later.
-	    local DEVTYPE="$(v=$(echo ${DEVINFO##*Type: }) ; echo ${v%% *})"
+	    local DEVTYPE="$(v=${DEVINFO##*Type: }; echo ${v%% *})"
 	    [ "$DEBUG" = 1 ] && echo 1>&2 "$PRG: DEBUG: fixdevfs: DEVTYPE=$DEVTYPE"
 
 	    if [ "$DEVTYPE" = "Direct-Access" ] || [ "$DEVTYPE" = "Direct-Access-RBC" ] ; then
 		## Lets find out some more information
 		## get the device id.
-		local DEVID="$(v=$(echo ${DEVINFO##*Id: }) ; n=$(echo ${v%% *}) ; echo ${n#*0})"
+		local DEVID="$(v=${DEVINFO##*Id: }; n=${v%% *}; echo ${n#*0})"
 		[ "$DEBUG" = 1 ] && echo 1>&2 "$PRG: DEBUG: fixdevfs: DEVID=$DEVID"
 
 		## get the device lun.
-		local DEVLUN="$(v=$(echo ${DEVINFO##*Lun: }) ; n=$(echo ${v%% *}) ; echo ${n#*0})"
+		local DEVLUN="$(v=${DEVINFO##*Lun: }; n=${v%% *}; echo ${n#*0})"
 		[ "$DEBUG" = 1 ] && echo 1>&2 "$PRG: DEBUG: fixdevfs: DEVLUN=$DEVLUN"
 
 		## get the device channel.
-		local DEVCHAN="$(v=$(echo ${DEVINFO##*Channel: }) ; n=$(echo ${v%% *}) ; echo ${n#*0})"
+		local DEVCHAN="$(v=${DEVINFO##*Channel: }; n=${v%% *}; echo ${n#*0})"
 		[ "$DEBUG" = 1 ] && echo 1>&2 "$PRG: DEBUG: fixdevfs: DEVCHAN=$DEVCHAN"
 
 		## get the scsi host id.
-		local DEVHOST="$(v=$(echo ${DEVINFO##*Host: scsi}) ; echo ${v%% *})"
+		local DEVHOST="$(v=${DEVINFO##*Host: scsi}; echo ${v%% *})"
 		[ "$DEBUG" = 1 ] && echo 1>&2 "$PRG: DEBUG: fixdevfs: DEVHOST=$DEVHOST"
 
-		local DEVCOUNT="$(($DEVCOUNT + 1))"
+		local DEVCOUNT="$((DEVCOUNT+1))"
 		[ "$DEBUG" = 1 ] && echo 1>&2 "$PRG: DEBUG: fixdevfs: DEVCOUNT=$DEVCOUNT"
 		if [ "$DEVHOST" = "$HOST" -a "$DEVCHAN" = "$BUS" -a \
 		    "$DEVID" = "$TARGET" -a "$DEVLUN" = "$LUN" ] ; then
-		    local DEV="sd$(smalltr $DEVCOUNT)${PARTNUM}"
+		    DEV="sd$(smalltr $DEVCOUNT)${PARTNUM}"
 		    echo "/dev/$DEV"
 		    return 0
 		fi
@@ -866,18 +870,20 @@ elif [ ! -b "$device" ] ; then
     exit 1
 fi
 
-## check that we are running on a GNU/Linux system, OSX/BSD does not
+## check that we are running on a Linux-based system, other kernels does not
 ## have the same /proc stuff
-if [ `uname -s` != Linux ] ; then
-    echo 1>&2 "$PRG: This utility will only work with GNU/Linux"
+if [ "`uname -s`" != Linux ] ; then
+    echo 1>&2 "$PRG: This utility will only work with Linux"
     exit 1
 fi
 
 ## check for ppc, i think uname -m is safe for this...
-if [ `uname -m` != ppc -a `uname -m` != ppc64 ] ; then
+machine="`uname -m`"
+if [ "$machine" != ppc -a "$machine" != ppc64 ] ; then
     echo 1>&2 "$PRG: This utility will only work on PowerPC hardware"
     exit 1
 fi
+unset machine
 
 ## ofpath cannot live without procfs
 if [ ! -f /proc/uptime ] ; then
@@ -895,13 +901,13 @@ if [ "$(v=`cat /proc/cpuinfo 2>/dev/null | grep pmac-generation` ; echo ${v##*:[
     SUBARCH=NewWorld
 elif [ "$(v=`cat /proc/cpuinfo 2>/dev/null | grep pmac-generation` ; echo ${v##*:[ ]})" = OldWorld ] ; then
     SUBARCH=OldWorld
-elif (cat /proc/cpuinfo 2>/dev/null | grep ^motherboard | grep -q AAPL) ; then
+elif cat /proc/cpuinfo 2>/dev/null | grep ^motherboard | grep -q AAPL; then
     SUBARCH=OldWorld
-elif (cat /proc/cpuinfo 2> /dev/null | grep ^machine | grep -q 'CHRP IBM') ; then
+elif cat /proc/cpuinfo 2> /dev/null | grep ^machine | grep -q 'CHRP IBM'; then
     SUBARCH=CHRP
-elif (cat /proc/cpuinfo 2> /dev/null | grep ^platform | grep -q 'Maple') ; then
+elif cat /proc/cpuinfo 2> /dev/null | grep ^platform | grep -q 'Maple'; then
     SUBARCH=Maple
-elif (cat /proc/cpuinfo 2>/dev/null | grep ^machine | grep -q 'CHRP Pegasos') ; then
+elif cat /proc/cpuinfo 2>/dev/null | grep ^machine | grep -q 'CHRP Pegasos'; then
     SUBARCH=Pegasos
 else
     echo 1>&2 "$PRG: This machine is not yet supported"
