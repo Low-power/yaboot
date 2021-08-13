@@ -724,21 +724,24 @@ struct bootp_packet * prom_get_netinfo (void)
 }
 
 /*
- * prom_get_mac()
- * returns the mac addr of an net card
+ * prom_get_macaddr
+ * returns the hexadecimal formatted MAC address of a network interface
  */
-char * prom_get_mac (struct bootp_packet * packet)
+char *prom_get_macaddr(const struct bootp_packet *packet)
 {
-     char * conf_path;
      int i;
 
      if (!packet)
         return NULL;
 
-     /* 3 chars per byte in chaddr + \0 */
-     conf_path = malloc(packet->hlen * 3 + 1);
-     if (!conf_path)
-         return NULL;
+#if 1
+	char *s = malloc(packet->hlen * 2 + 1);
+	if(!s) return NULL;
+	for(i = 0; i < packet->hlen; i++) {
+		sprintf(s + i * 2, "%02x", packet->chaddr[i]);
+	}
+	return s;
+#else
      sprintf(conf_path, "%02x", packet->chaddr[0]);
 
      for (i = 1; i < packet->hlen; i++) {
@@ -748,13 +751,14 @@ char * prom_get_mac (struct bootp_packet * packet)
      }
 
      return conf_path;
+#endif
 }
 
 /*
- * prom_get_ip()
- * returns the ip addr of an net card
+ * prom_get_ipaddr
+ * returns the hexadecimal formatted IP address of a network interface
  */
-char * prom_get_ip (struct bootp_packet * packet)
+char *prom_get_ipaddr(const struct bootp_packet *packet)
 {
      char * conf_path;
 

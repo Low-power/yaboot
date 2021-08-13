@@ -56,6 +56,7 @@
 #include "debug.h"
 
 #define CONFIG_FILE_NAME	"yaboot.conf"
+#define ALT_CONFIG_FILE_NAME	"yaboot.cfg"
 #define CONFIG_FILE_MAX		0x8000		/* 32Ki */
 
 #ifdef USE_MD5_PASSWORDS
@@ -387,8 +388,9 @@ load_config_file(struct boot_fspec_t *fspec)
          char * macaddr = NULL;
          int default_mac = 0;
 
-         macaddr = prom_get_mac(prom_get_netinfo());
+         macaddr = prom_get_macaddr(prom_get_netinfo());
          default_mac = cfg_set_default_by_mac(macaddr);
+		free(macaddr);
          if (default_mac >= 1) {
             prom_printf("Default label was changed to macaddr label.\n");
          }
@@ -466,8 +468,10 @@ static int load_my_config_file(struct boot_fspec_t *orig_fspec)
      int rc = 0;
      struct boot_fspec_t fspec = *orig_fspec;
      char *cfgpath = (_machine == _MACH_chrp || _machine == _MACH_bplan) ? "/boot/" : "";
+#if 0
      int flen;
      int minlen;
+#endif
 
      packet = prom_get_netinfo();
 
@@ -476,13 +480,15 @@ static int load_my_config_file(struct boot_fspec_t *orig_fspec)
       * prepended.
       */
 
-     /* 3 chars per byte in chaddr + 2 chars for htype + /boot/ +\0 */
-     fspec.file = malloc(packet->hlen * 3 + 2 + 7);
+     /* 2 chars per byte in chaddr + 2 chars for htype + /boot/yaboot.conf. + \0 */
+     fspec.file = malloc(packet->hlen * 2 + 2 + 18 + 1);
      if (!fspec.file)
 	  goto out;
 
-     sprintf(fspec.file, "%s%02x-", cfgpath, packet->htype);
-     strcat(fspec.file, prom_get_mac(packet));
+	char *addr_s = prom_get_macaddr(packet);
+	if(!addr_s) goto out;
+     sprintf(fspec.file, "%syaboot.conf.%02x-%s", cfgpath, packet->htype, addr_s);
+	free(addr_s);
 
      rc = load_config_file(&fspec);
      if (rc)
@@ -491,17 +497,23 @@ static int load_my_config_file(struct boot_fspec_t *orig_fspec)
      /*
       * Now try to match on IP address.
       */
-     /* no need to realloc for /boot/ + 8 chars in yiaddr + \0 */
-     sprintf(fspec.file, "%s%s", cfgpath, prom_get_ip(packet));
-
+     /* no need to realloc for /boot/yaboot.conf. + 8 chars in yiaddr + \0 */
+	addr_s = prom_get_ipaddr(packet);
+	if(!addr_s) goto out;
+     sprintf(fspec.file, "%syaboot.conf.%s", cfgpath, addr_s);
+	free(addr_s);
+#if 0
      for (flen = strlen(fspec.file),
           minlen = strlen(cfgpath); flen > minlen; flen--) {
+#endif
 	  rc = load_config_file(&fspec);
 	  if (rc)
 	       goto out;
+#if 0
 	  /* Chop one digit off the end, try again */
 	  fspec.file[flen - 1] = '\0';
      }
+#endif
 
  out:
      if (rc) /* modify original only on success */
@@ -1745,8 +1757,13 @@ yaboot_main(void)
 	  useconf = load_my_config_file(&boot);
      }
 
-     if (!useconf)
-         useconf = load_config_file(&boot);
+     if (!useconf) {
+		useconf = load_config_file(&boot);
+		if(!useconf && !conf_given && strcmp(boot.file, "/boot/" CONFIG_FILE_NAME) == 0) {
+			strcpy(boot.file + 6, ALT_CONFIG_FILE_NAME);
+			useconf = load_config_file(&boot);
+		}
+	}
 
      prom_printf("Welcome to yaboot version " VERSION "\n");
      prom_printf("Enter \"help\" to get some basic usage information\n");
