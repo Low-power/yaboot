@@ -678,11 +678,10 @@ prom_pause(void)
  * prom_get_netinfo()
  * returns the packet with all needed info for netboot
  */
-struct bootp_packet * prom_get_netinfo (void)
+struct bootp_packet *prom_get_netinfo(void)
 {
-     void *bootp_response = NULL;
+     char *bootp_response;
      char *propname;
-     struct bootp_packet *packet;
      int i = 0, size, offset = 0;
      prom_handle chosen;
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
@@ -707,7 +706,7 @@ struct bootp_packet * prom_get_netinfo (void)
      if (size <= 0)
          return NULL;
 
-     if (sizeof(*packet) > size - offset) {
+     if (sizeof(struct bootp_packet) > size - offset) {
          prom_printf("Malformed %s property?\n", propname);
          return NULL;
      }
@@ -716,11 +715,23 @@ struct bootp_packet * prom_get_netinfo (void)
      if (!bootp_response)
          return NULL;
 
-     if (prom_getprop(chosen, propname, bootp_response, size) < 0)
-         return NULL;
+	if (prom_getprop(chosen, propname, bootp_response, size) < 0) {
+		free(bootp_response);
+		return NULL;
+	}
 
-     packet = bootp_response + offset;
-     return packet;
+	if(offset) {
+		struct bootp_packet *packet = malloc(sizeof(struct bootp_packet));
+		if(!packet) {
+			free(bootp_response);
+			return NULL;
+		}
+		memcpy(packet, bootp_response + offset, sizeof(struct bootp_packet));
+		free(bootp_response);
+		return packet;
+	} else {
+		return (struct bootp_packet *)bootp_response;
+	}
 }
 
 /*
