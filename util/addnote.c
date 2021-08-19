@@ -29,10 +29,10 @@
 #include <string.h>
 
 /* CHRP note section */
-char arch[] = "PowerPC";
+static const char arch[] = "PowerPC";
 
 #define N_DESCR	6
-unsigned int descr[N_DESCR] = {
+static const unsigned int descr[N_DESCR] = {
      0xffffffff,		/* real-mode = true */
      0x00c00000,		/* real-base, i.e. where we expect OF to be */
      0xffffffff,		/* real-size */
@@ -42,7 +42,7 @@ unsigned int descr[N_DESCR] = {
 };
 
 /* RPA note section */
-char rpaname[] = "IBM,RPA-Client-Config";
+static const char rpaname[] = "IBM,RPA-Client-Config";
 
 /*
  * Note: setting ignore_my_client_config *should* mean that OF ignores
@@ -51,7 +51,7 @@ char rpaname[] = "IBM,RPA-Client-Config";
  * reasonable.
  */
 #define N_RPA_DESCR	8
-unsigned int rpanote[N_RPA_DESCR] = {
+static const unsigned int rpanote[N_RPA_DESCR] = {
      0,				/* lparaffinity */
      64,			/* min_rmo_size */
      0,				/* min_rmo_percent */
@@ -64,7 +64,7 @@ unsigned int rpanote[N_RPA_DESCR] = {
 
 #define ROUNDUP(len)	(((len) + 3) & ~3)
 
-unsigned char buf[512];
+static unsigned char buf[512];
 
 #define GET_16BE(off)	((buf[off] << 8) + (buf[(off)+1]))
 #define GET_32BE(off)	((GET_16BE(off) << 16) + GET_16BE((off)+2))
@@ -94,7 +94,7 @@ unsigned char buf[512];
 #define ELFCLASS32	1
 #define ELFDATA2MSB	2
 
-unsigned char elf_magic[4] = { 0x7f, 'E', 'L', 'F' };
+static const unsigned char elf_magic[4] = { 0x7f, 'E', 'L', 'F' };
 
 int
 main(int ac, char **av)
@@ -165,7 +165,7 @@ main(int ac, char **av)
      PUT_32BE(ns, strlen(arch) + 1);
      PUT_32BE(ns + 4, N_DESCR * 4);
      PUT_32BE(ns + 8, 0x1275);
-     strcpy(&buf[ns + 12], arch);
+     strcpy((char *)buf + ns + 12, arch);
      ns += 12 + strlen(arch) + 1;
      for (i = 0; i < N_DESCR; ++i, ns += 4)
 	  PUT_32BE(ns, descr[i]);
@@ -180,7 +180,7 @@ main(int ac, char **av)
      PUT_32BE(ns, strlen(rpaname) + 1);
      PUT_32BE(ns + 4, sizeof(rpanote));
      PUT_32BE(ns + 8, 0x12759999);
-     strcpy(&buf[ns + 12], rpaname);
+     strcpy((char *)buf + ns + 12, rpaname);
      ns += 12 + ROUNDUP(strlen(rpaname) + 1);
      for (i = 0; i < N_RPA_DESCR; ++i, ns += 4)
 	  PUT_32BE(ns, rpanote[i]);
