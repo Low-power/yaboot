@@ -482,8 +482,8 @@ static int load_my_config_file(struct boot_fspec_t *orig_fspec)
       * prepended.
       */
 
-     /* 2 chars per byte in chaddr + 2 chars for htype + /boot/yaboot.conf. + \0 */
-     fspec.file = malloc(packet->hlen * 2 + 2 + 18 + 1);
+     /* "/boot/yaboot.conf." + 2 chars for htype + "-" + 2 chars per byte in chaddr + "\0" */
+     fspec.file = malloc(18 + 2 + 1 + packet->hlen * 2 + 1);
      if (!fspec.file)
 	  goto out;
 
