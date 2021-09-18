@@ -863,7 +863,7 @@ int get_params(struct boot_param_t* params)
 	  if(!defdevice) defdevice = boot.dev;
 	  prom_printf(
 	       "\nPress the tab key for a list of defined images.\n"
-	       "The label marked with a \"*\" is is the default image, "
+	       "The label marked with a \"*\" is the default image, "
 	       "press <return> to boot it.\n\n"
 	       "To boot any other label simply type its name and press <return>.\n\n"
 	       "To boot a kernel image which is not defined in the yaboot configuration \n"
