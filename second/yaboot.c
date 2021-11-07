@@ -1470,8 +1470,7 @@ load_elf64(struct boot_file_t *file, loadinfo_t *loadinfo)
      loadinfo->memsize = loadinfo->filesize = loadinfo->offset = 0;
      p = ph;
      for (i = 0; i < e->e_phnum; ++i, ++p) {
-	  if (p->p_type != PT_LOAD || p->p_offset == 0)
-	       continue;
+	  if (p->p_type != PT_LOAD) continue;
 	  if (loadinfo->memsize == 0) {
 	       loadinfo->offset = p->p_offset;
 	       loadinfo->memsize = p->p_memsz;
@@ -1519,17 +1518,16 @@ load_elf64(struct boot_file_t *file, loadinfo_t *loadinfo)
      p = ph;
      for (i = 0; i < e->e_phnum; ++i, ++p) {
 	  unsigned long offset;
-	  if (p->p_type != PT_LOAD || p->p_offset == 0)
-	       continue;
+	  if (p->p_type != PT_LOAD) continue;
 
 	  /* Now, we skip to the image itself */
-	  if ((*(file->fs->seek))(file, p->p_offset) != FILE_ERR_OK) {
+	  if (file->fs->seek(file, p->p_offset) != FILE_ERR_OK) {
 	       prom_printf ("Seek error\n");
 	       prom_release(loadinfo->base, loadinfo->memsize);
 	       goto bail;
 	  }
 	  offset = p->p_vaddr - loadinfo->load_loc;
-	  if ((*(file->fs->read))(file, p->p_filesz, loadinfo->base+offset) != p->p_filesz) {
+	  if (file->fs->read(file, p->p_filesz, loadinfo->base+offset) != p->p_filesz) {
 	       prom_printf ("Read failed\n");
 	       prom_release(loadinfo->base, loadinfo->memsize);
 	       goto bail;
