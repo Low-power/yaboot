@@ -25,7 +25,7 @@ PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 ## allow to run out of /target in boot-floppies
 [ -n "$PATH_PREFIX" ] && PATH="${PATH_PREFIX}/usr/local/bin:${PATH_PREFIX}/usr/local/sbin:${PATH_PREFIX}/usr/bin:${PATH_PREFIX}/usr/sbin:${PATH_PREFIX}/bin:${PATH_PREFIX}/sbin:${PATH}"
 PRG="${0##*/}"
-VERSION=1.3.16-rivoreo-r2
+VERSION=1.3.16-rivoreo-r3
 CHROOT=/
 ## $CONFIG is relative to $CHROOT
 CONFIG=boot/yaboot.conf

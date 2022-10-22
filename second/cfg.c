@@ -96,14 +96,13 @@ CONFIG cf_image[] =
      {cft_end, NULL, NULL}};
 
 static char flag_set;
-static char *last_token = NULL, *last_item = NULL, *last_value = NULL;
+static int is_new_line;
 static int line_num;
 static int back = 0;		/* can go back by one char */
 static char *currp = NULL;
 static char *endp = NULL;
 static char *file_name = NULL;
 static CONFIG *curr_table = cf_options;
-static int ignore_entry;
 static jmp_buf env;
 
 static struct IMAGES {
@@ -165,24 +164,23 @@ static char *cfg_get_token (void)
      char *here;
      int ch, escaped;
 
-     if (last_token) {
-	  here = last_token;
-	  last_token = NULL;
-	  return here;
-     }
-     while (1) {
-	  while (ch = next (), ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r')
-	       if (ch == '\n' || ch == '\r')
-		    line_num++;
-	  if (ch == EOF || ch == (int)NULL)
-	       return NULL;
-	  if (ch != '#')
-	       break;
-	  while (ch = next_raw (), (ch != '\n' && ch != '\r'))
-	       if (ch == EOF)
-		    return NULL;
-	  line_num++;
-     }
+	while (1) {
+		if(is_new_line) {
+			while (ch = next (), ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r') {
+				if (ch == '\n') line_num++;
+			}
+		} else {
+			while (ch = next (), ch == ' ' || ch == '\t');
+			if(ch == '\n') return NULL;
+		}
+		if (ch == EOF || !ch) return NULL;
+		if (ch != '#') break;
+		while (ch = next_raw (), (ch != '\n' && ch != '\r')) {
+			if (ch == EOF) return NULL;
+		}
+		line_num++;
+	}
+	is_new_line = 0;
      if (ch == '=')
 	  return strdup ("=");
      if (ch == '"') {
@@ -248,37 +246,23 @@ static char *cfg_get_token (void)
      return 0;			/* not reached */
 }
 
-static void cfg_return_token (char *token)
-{
-     last_token = token;
-}
-
 static int cfg_next (char **item, char **value)
 {
-     char *this;
-
-     if (last_item) {
-	  *item = last_item;
-	  *value = last_value;
-	  last_item = NULL;
-	  return 1;
-     }
-     *value = NULL;
-     if (!(*item = cfg_get_token ()))
-	  return 0;
-     if (!strcmp (*item, "="))
-	  cfg_error ("Syntax error");
-     if (!(this = cfg_get_token ()))
-	  return 1;
-     if (strcmp (this, "=")) {
-	  cfg_return_token (this);
-	  return 1;
-     }
-     if (!(*value = cfg_get_token ()))
-	  cfg_error ("Value expected at EOF");
-     if (!strcmp (*value, "="))
-	  cfg_error ("Syntax error after %s", *item);
-     return 1;
+	char *this;
+	is_new_line = 1;
+	*value = NULL;
+	*item = cfg_get_token();
+	if(!*item) return 0;
+	if(strcmp(*item, "=") == 0) cfg_error("Syntax error");
+	this = cfg_get_token();
+	if(!this) return 1;
+	if(strcmp(this, "=") == 0) {
+		*value = cfg_get_token();
+		if(strcmp(*value, "=") == 0) cfg_error("Syntax error after %s", *item);
+	} else {
+		*value = this;
+	}
+	return 1;
 }
 
 static char *cfg_get_strg_i (CONFIG * table, char *item)
@@ -380,16 +364,15 @@ static int cfg_set (char *item, char *value)
                 goto cfg_set_redo;
 
 cfg_set_cont:
-	  while (*p)
-	       p = &((*p)->next);
-	  *p = (struct IMAGES *)malloc (sizeof (struct IMAGES));
-	  if (*p == NULL) {
+	  while (*p) p = &(*p)->next;
+	  *p = malloc(sizeof(struct IMAGES));
+	  if (!*p) {
 	       prom_printf("malloc error in cfg_set\n");
 	       return -1;
 	  }
 	  (*p)->next = 0;
 	  (*p)->obsolete = ignore;
-	  curr_table = ((*p)->table);
+	  curr_table = (*p)->table;
 	  memcpy (curr_table, cf_image, sizeof (cf_image));
      }
 

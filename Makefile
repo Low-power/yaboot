@@ -3,7 +3,7 @@
 include Config
 
 VERSION := 1.3.16
-VERSIONEXTRA := -rivoreo-r2
+VERSIONEXTRA := -rivoreo-r3
 
 # Debug mode (spam/verbose)
 DEBUG ?= 0
